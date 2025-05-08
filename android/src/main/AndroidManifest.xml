@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="cn.rongcloud.imkit.flutter.rongcloud_im_kit">
+  <application>
+    <meta-data
+      android:name="rc.flutterimkit"
+      android:value="cn.rongcloud.imkit.flutter.rongcloud_im_kit.VersionUpload" />
+  </application>
+</manifest>

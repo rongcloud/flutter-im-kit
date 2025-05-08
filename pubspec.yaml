@@ -1,0 +1,288 @@
+name: rongcloud_im_kit
+description: "Rongcloud IM Kit for flutter."
+version: 1.0.0
+homepage: https://www.rongcloud.cn/
+repository: https://github.com/rongcloud/flutter-im-kit
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  rongcloud_im_wrapper_plugin: ^5.12.1+2
+
+  provider: ^6.1.2
+  cached_network_image: ^3.4.1
+
+  flutter_slidable: ^4.0.0
+  just_audio: ^0.9.46
+
+  record: ^6.0.0
+
+  path_provider: ^2.1.5
+
+  image_picker: ^1.1.2
+  photo_view: ^0.15.0
+  
+  video_player: ^2.9.5
+
+  file_picker: ^9.2.2
+
+  xml: ^6.5.0
+
+  share_plus: ^10.1.4
+
+  scroll_to_index: ^3.0.1
+
+  flutter_linkify: ^6.0.0
+
+  url_launcher: ^6.3.1
+  visibility_detector: ^0.4.0+2
+
+  permission_handler: ^11.4.0
+
+  flutter_local_notifications: ^19.0.0
+
+  device_info_plus: ^11.3.3
+  
+  image_gallery_saver_plus: ^4.0.1
+
+  package_info_plus: ^8.3.0
+
+  dio: ^5.7.0
+
+dev_dependencies:
+  # flutter_test:
+  #   sdk: flutter
+  flutter_lints: ^5.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  # This section identifies this Flutter project as a plugin project.
+  # The 'pluginClass' specifies the class (in Java, Kotlin, Swift, Objective-C, etc.)
+  # which should be registered in the plugin registry. This is required for
+  # using method channels.
+  # The Android 'package' specifies package in which the registered class is.
+  # This is required for using method channels on Android.
+  # The 'ffiPlugin' specifies that native code should be built and bundled.
+  # This is required for using `dart:ffi`.
+  # All these are used by the tooling to maintain consistency when
+  # adding or updating assets for this project.
+  plugin:
+    platforms:
+      android:
+        package: cn.rongcloud.imkit.flutter.rongcloud_im_kit
+        pluginClass: RongcloudImKitPlugin
+      # ios:
+      #   pluginClass: RongcloudImKitPlugin
+
+  # To add assets to your plugin package, add an assets section, like this:
+  assets:
+    - assets/search.jpg
+    - assets/add.jpg
+    - assets/default_collection_portrait.png
+    - assets/default_discussion_collection_portrait.png
+    - assets/default_discussion_portrait.png
+    - assets/default_group_portrait.png
+    - assets/chat_0.png 
+    - assets/chat_29.png
+    - assets/contact_0.png
+    - assets/contact_29.png
+    - assets/me_0.png
+    - assets/me_29.png
+    - assets/square_0.png
+    - assets/square_29.png
+    - assets/block_notification.png
+    - assets/inputbar_keyboard.png
+    - assets/inputbar_emoji.png
+    - assets/inputbar_voice.png
+    - assets/inputbar_add.png
+    - assets/voice_message_icon_receive.png
+    - assets/from_voice_playing.gif
+    - assets/to_voice_playing.gif
+    - assets/voice_1.png
+    - assets/voice_2.png
+    - assets/voice_3.png 
+    - assets/voice_4.png 
+    - assets/voice_5.png
+    - assets/voice_6.png
+    - assets/voice_7.png
+    - assets/voice_8.png 
+    - assets/voice_return_arrow.png
+    - assets/plugin_item_audio.png
+    - assets/plugin_item_burn.png
+    - assets/plugin_item_camera.png
+    - assets/plugin_item_card.png
+    - assets/plugin_item_video.png
+    - assets/plugin_item_voice_input.png
+    - assets/plugin_item_file.png
+    - assets/plugin_item_location.png
+    - assets/plugin_item_picture.png
+    - assets/sight_message_shadow.png
+    - assets/sight_message_play.png
+    - assets/emoji.plist        
+    - assets/avatar_default_single.png
+    - assets/avatar_default_group.png
+    - assets/avatar_default_system.png
+
+    - assets/RCLightIcon/Abnormal.png
+    - assets/RCLightIcon/Add.png
+    - assets/RCLightIcon/Attention.png
+    - assets/RCLightIcon/Audio.png
+    - assets/RCLightIcon/Camera.png
+    - assets/RCLightIcon/Chat.png
+    - assets/RCLightIcon/Close.png
+    - assets/RCLightIcon/Copy.png
+    - assets/RCLightIcon/Delete.png
+    - assets/RCLightIcon/Do-not-disturb-1.png
+    - assets/RCLightIcon/Do-not-disturb.png
+    - assets/RCLightIcon/Document.png
+    - assets/RCLightIcon/Done.png
+    - assets/RCLightIcon/Down-arrow.png
+    - assets/RCLightIcon/Download.png
+    - assets/RCLightIcon/Edit.png
+    - assets/RCLightIcon/Emoji-1.png
+    - assets/RCLightIcon/Emoji.png
+    - assets/RCLightIcon/Enter-the-keyboard.png
+    - assets/RCLightIcon/Error.png
+    - assets/RCLightIcon/File.png
+    - assets/RCLightIcon/Forward-merge.png
+    - assets/RCLightIcon/Forward-single.png
+    - assets/RCLightIcon/Gallery.png
+    - assets/RCLightIcon/Gift.png
+    - assets/RCLightIcon/Group-default-avatar.png
+    - assets/RCLightIcon/Left-arrow.png
+    - assets/RCLightIcon/loading.png
+    - assets/RCLightIcon/Local.png
+    - assets/RCLightIcon/Member-1.png
+    - assets/RCLightIcon/Member.png
+    - assets/RCLightIcon/More.png
+    - assets/RCLightIcon/Multi-select.png
+    - assets/RCLightIcon/No-messages.png
+    - assets/RCLightIcon/Official-1.png
+    - assets/RCLightIcon/Official.png
+    - assets/RCLightIcon/Pause-one.png
+    - assets/RCLightIcon/Pin.png
+    - assets/RCLightIcon/Play.png
+    - assets/RCLightIcon/Refresh.png
+    - assets/RCLightIcon/Reply.png
+    - assets/RCLightIcon/Right-arrow.png
+    - assets/RCLightIcon/Search.png
+    - assets/RCLightIcon/Thumbnail-failed.png
+    - assets/RCLightIcon/Trumpet.png
+    - assets/RCLightIcon/User-default-avatar.png
+    - assets/RCLightIcon/Video-play.png
+    - assets/RCLightIcon/Voice-message-1.png
+    - assets/RCLightIcon/Voice-message.png
+    - assets/RCLightIcon/allow_noti.png
+    - assets/RCLightIcon/unpin.png
+    - assets/RCLightIcon/voice_message_send.png
+    - assets/RCLightIcon/multi_select.png
+    - assets/RCLightIcon/multi_unselect.png
+    - assets/RCLightIcon/filming.png
+    - assets/RCLightIcon/play_video.png
+    - assets/RCLightIcon/recall.png
+
+    - assets/RCDarkIcon/Down-arrow.png
+    - assets/RCDarkIcon/Abnormal.png
+    - assets/RCDarkIcon/Attention.png
+    - assets/RCDarkIcon/Add.png
+    - assets/RCDarkIcon/Audio.png
+    - assets/RCDarkIcon/Camera.png
+    - assets/RCDarkIcon/Chat.png
+    - assets/RCDarkIcon/Close.png
+    - assets/RCDarkIcon/Copy.png
+    - assets/RCDarkIcon/Delete.png
+    - assets/RCDarkIcon/Do-not-disturb-1.png
+    - assets/RCDarkIcon/Do-not-disturb.png
+    - assets/RCDarkIcon/Document.png
+    - assets/RCDarkIcon/Done.png
+    - assets/RCDarkIcon/Download.png
+    - assets/RCDarkIcon/Edit.png
+    - assets/RCDarkIcon/Emoji-1.png
+    - assets/RCDarkIcon/Emoji.png
+    - assets/RCDarkIcon/Enter-the-keyboard.png
+    - assets/RCDarkIcon/Error.png
+    - assets/RCDarkIcon/File.png
+    - assets/RCDarkIcon/Forward-merge.png
+    - assets/RCDarkIcon/Forward-single.png
+    - assets/RCDarkIcon/Gallery.png
+    - assets/RCDarkIcon/Gift.png
+    - assets/RCDarkIcon/Group-default-avatar.png
+    - assets/RCDarkIcon/Left-arrow.png
+    - assets/RCDarkIcon/loading.png
+    - assets/RCDarkIcon/Local.png
+    - assets/RCDarkIcon/Member-1.png
+    - assets/RCDarkIcon/Member.png
+    - assets/RCDarkIcon/More.png
+    - assets/RCDarkIcon/Multi-select.png
+    - assets/RCDarkIcon/No-messages.png
+    - assets/RCDarkIcon/Official-1.png
+    - assets/RCDarkIcon/Official.png
+    - assets/RCDarkIcon/Pause-one.png
+    - assets/RCDarkIcon/Pin.png
+    - assets/RCDarkIcon/Play.png
+    - assets/RCDarkIcon/Refresh.png
+    - assets/RCDarkIcon/Reply.png
+    - assets/RCDarkIcon/Right-arrow.png
+    - assets/RCDarkIcon/Search.png
+    - assets/RCDarkIcon/Thumbnail-failed.png
+    - assets/RCDarkIcon/Trumpet.png
+    - assets/RCDarkIcon/User-default-avatar.png
+    - assets/RCDarkIcon/Video-play.png
+    - assets/RCDarkIcon/Voice-message-1.png
+    - assets/RCDarkIcon/Voice-message.png
+    - assets/RCDarkIcon/allow_noti.png
+    - assets/RCDarkIcon/unpin.png
+    - assets/RCDarkIcon/voice_message_send.png
+    - assets/RCDarkIcon/multi_select.png
+    - assets/RCDarkIcon/multi_unselect.png
+    - assets/RCDarkIcon/filming.png
+    - assets/RCDarkIcon/play_video.png
+    - assets/RCDarkIcon/recall.png
+    
+    - assets/messageSendFail.png 
+    - assets/messageSending.png
+    - assets/sight_play.png
+    - assets/voice_playing_receive.gif
+    - assets/voice_playing_send.gif
+    - assets/sight_download.png
+    - assets/sight_downloading.png
+    - assets/voice_send_bg.png
+    - assets/voice_send_icon.png
+    - assets/multi_select.png
+    - assets/multi_unselect.png
+    
+
+  #
+  # For details regarding assets in packages, see
+  # https://flutter.dev/to/asset-from-package
+  #
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # To add custom fonts to your plugin package, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts in packages, see
+  # https://flutter.dev/to/font-from-package
