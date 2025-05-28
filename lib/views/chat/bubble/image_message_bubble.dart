@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
 
 import 'package:flutter/material.dart';
 import '../../../rongcloud_im_kit.dart';

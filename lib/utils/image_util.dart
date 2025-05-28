@@ -1,9 +1,9 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
-import 'dart:typed_data';
 // ignore: implementation_imports
 import 'package:rongcloud_im_wrapper_plugin/src/rongcloud_im_wrapper_platform_interface.dart';
 
@@ -117,16 +117,25 @@ class ImageUtil {
     } else {
       // 本地资源图片，判断是否已经有 "assets/" 前缀
       if (notInAssets) {
-        return Image.file(
-          File(imagePath),
-          width: width,
-          height: height,
-          fit: fit,
-          color: color,
-          errorBuilder: (context, error, stackTrace) {
-            return SizedBox(width: width, height: height);
-          },
-        );
+        // 在 Web 平台上，不支持本地文件访问，显示错误图标
+        if (kIsWeb) {
+          return Icon(
+            Icons.error,
+            size: width ?? height ?? 24,
+            color: color ?? Colors.grey,
+          );
+        } else {
+          return Image.file(
+            File(imagePath),
+            width: width,
+            height: height,
+            fit: fit,
+            color: color,
+            errorBuilder: (context, error, stackTrace) {
+              return SizedBox(width: width, height: height);
+            },
+          );
+        }
       } else {
         String assetPath =
             imagePath.startsWith('assets/') ? imagePath : 'assets/$imagePath';
@@ -144,6 +153,11 @@ class ImageUtil {
   }
 
   static Future<String?> detectImageFormat(String filePath) async {
+    // 在 Web 平台上，不支持本地文件访问
+    if (kIsWeb) {
+      return null;
+    }
+
     final file = File(filePath);
     final List<int> bytes = await file.openRead(0, 20).first;
 

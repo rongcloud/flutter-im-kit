@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +69,7 @@ class GridButtonWidget extends StatefulWidget {
             onTapBeforePermission(context, checkPermission);
           }
           final status = await checkPermission.request();
-          
+
           if (status.isGranted) {
             // 有权限
             if (context.mounted) {
@@ -158,6 +159,16 @@ class GridButtonWidget extends StatefulWidget {
             XFile? imageFile =
                 await _picker.pickVideo(source: ImageSource.gallery);
             if (imageFile != null) {
+              // 在 Web 平台上不支持本地文件访问
+              if (kIsWeb) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Web 平台不支持视频文件处理')),
+                  );
+                }
+                return;
+              }
+
               // 获取视频时长
               final VideoPlayerController controller =
                   VideoPlayerController.file(File(imageFile.path));
@@ -267,6 +278,16 @@ class GridButtonWidget extends StatefulWidget {
                 source: ImageSource.camera,
                 maxDuration: const Duration(seconds: 119));
             if (pickMedia != null) {
+              // 在 Web 平台上不支持本地文件访问
+              if (kIsWeb) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Web 平台不支持视频文件处理')),
+                  );
+                }
+                return;
+              }
+
               VideoPlayerController videoPlayerController =
                   VideoPlayerController.file(
                       File(pickMedia.path)); //Your file here
@@ -337,7 +358,7 @@ class GridButtonWidget extends StatefulWidget {
             RCKThemeProvider().themeIcon.document ?? ''),
         onTap: () async {
           // 检查文件权限
-          final Permission checkPermission = Platform.isAndroid
+          final Permission checkPermission = !kIsWeb && Platform.isAndroid
               ? Permission.manageExternalStorage
               : Permission.storage;
           if (onTapBeforePermission != null) {

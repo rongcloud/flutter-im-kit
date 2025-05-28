@@ -1,7 +1,9 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
+import 'package:flutter/foundation.dart';
 
 class RCKSightPlayerPage extends StatefulWidget {
   /// 当前播放的视频索引
@@ -60,6 +62,15 @@ class _RCKSightPlayerPageState extends State<RCKSightPlayerPage>
       if (filePath != null && filePath.startsWith('file://')) {
         filePath = filePath.substring(7);
       }
+
+      // 在 Web 平台上不支持本地文件访问
+      if (kIsWeb) {
+        if (mounted) {
+          Navigator.pop(context);
+        }
+        return;
+      }
+
       File file = File(filePath ?? '');
       if (!file.existsSync() && mounted) {
         Navigator.pop(context);
@@ -110,7 +121,7 @@ class _RCKSightPlayerPageState extends State<RCKSightPlayerPage>
     // 应用回到前台
     if (state == AppLifecycleState.resumed) {
       // 在Android平台上，需要重新初始化视频播放器来解决黑屏问题
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         _initializeVideoPlayer();
       } else {
         // 在iOS平台上，可以简单地恢复播放

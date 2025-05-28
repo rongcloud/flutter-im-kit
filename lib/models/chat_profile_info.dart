@@ -18,5 +18,4 @@ class RCKChatProfileInfo {
 }
 
 typedef CustomInfoProvider = Future<RCKChatProfileInfo> Function(
-    {RCIMIWMessage? message,
-    RCIMIWConversation? conversation});
+    {RCIMIWMessage? message, RCIMIWConversation? conversation});

@@ -1,6 +1,6 @@
 name: rongcloud_im_kit
-description: "Rongcloud IM Kit for flutter."
-version: 1.0.0
+description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-use chat UI components, conversation lists, and messaging features for rapid integration of instant messaging capabilities into Flutter applications."
+version: 1.0.0+1
 homepage: https://www.rongcloud.cn/
 repository: https://github.com/rongcloud/flutter-im-kit
 
@@ -18,7 +18,7 @@ dependencies:
   cached_network_image: ^3.4.1
 
   flutter_slidable: ^4.0.0
-  just_audio: ^0.9.46
+  just_audio: ^0.10.3
 
   record: ^6.0.0
 
@@ -29,11 +29,11 @@ dependencies:
   
   video_player: ^2.9.5
 
-  file_picker: ^9.2.2
+  file_picker: ^10.1.9
 
   xml: ^6.5.0
 
-  share_plus: ^10.1.4
+  share_plus: ^11.0.0
 
   scroll_to_index: ^3.0.1
 
@@ -42,7 +42,7 @@ dependencies:
   url_launcher: ^6.3.1
   visibility_detector: ^0.4.0+2
 
-  permission_handler: ^11.4.0
+  permission_handler: ^12.0.0+1
 
   flutter_local_notifications: ^19.0.0
 

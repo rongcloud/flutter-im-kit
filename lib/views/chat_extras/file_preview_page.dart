@@ -45,7 +45,11 @@ class RCKFilePreviewPageState extends State<RCKFilePreviewPage> {
             icon: const Icon(Icons.share),
             onPressed: () {
               if (fileMessage.local != null && fileMessage.local!.isNotEmpty) {
-                Share.shareXFiles([XFile(fileMessage.local!)]);
+                SharePlus.instance.share(
+                  ShareParams(
+                    files: [XFile(fileMessage.local!)],
+                  ),
+                );
               }
             },
           ),

@@ -1,8 +1,10 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rongcloud_im_wrapper_plugin/rongcloud_im_wrapper_plugin.dart';
 import 'package:just_audio/just_audio.dart';
+import 'dart:async';
 import 'voice_record_provider.dart';
 import 'chat_provider.dart';
 
@@ -15,10 +17,12 @@ enum RCKAudioPlayerState {
 class RCKAudioPlayerProvider extends ChangeNotifier
     with WidgetsBindingObserver {
   final _player = AudioPlayer();
+  StreamSubscription<PlayerState>? _playerStateSubscription;
   String? _currentPlayingMessageId;
   String? get currentPlayingMessageId => _currentPlayingMessageId;
   RCKAudioPlayerState _state = RCKAudioPlayerState.stopped;
   RCKAudioPlayerState get state => _state;
+  bool _disposed = false;
 
   RCKAudioPlayerProvider() {
     WidgetsBinding.instance.addObserver(this);
@@ -34,6 +38,8 @@ class RCKAudioPlayerProvider extends ChangeNotifier
 
   Future<void> playVoiceMessage(RCIMIWMediaMessage message,
       [BuildContext? context]) async {
+    if (_disposed) return;
+
     if (context != null) {
       final recordProvider =
           Provider.of<RCKVoiceRecordProvider>(context, listen: false);
@@ -63,7 +69,7 @@ class RCKAudioPlayerProvider extends ChangeNotifier
       filePath = filePath.substring(7);
     }
 
-    if (filePath != null && File(filePath).existsSync()) {
+    if (filePath != null && !kIsWeb && File(filePath).existsSync()) {
       try {
         // 使用 file:// 协议
         final fileUri = Uri.file(filePath).toString();
@@ -74,25 +80,34 @@ class RCKAudioPlayerProvider extends ChangeNotifier
 
         _currentPlayingMessageId = message.messageId.toString();
         _state = RCKAudioPlayerState.playing;
-        notifyListeners();
+        if (!_disposed) {
+          notifyListeners();
+        }
 
         await _player.play();
 
-        _player.playerStateStream.listen((state) {
-          if (state.processingState == ProcessingState.completed) {
+        // 取消之前的订阅
+        _playerStateSubscription?.cancel();
+
+        // 创建新的订阅
+        _playerStateSubscription = _player.playerStateStream.listen((state) {
+          if (!_disposed &&
+              state.processingState == ProcessingState.completed) {
             _currentPlayingMessageId = null;
             _state = RCKAudioPlayerState.stopped;
             notifyListeners();
           }
         });
       } catch (e) {
-        _currentPlayingMessageId = null;
-        _state = RCKAudioPlayerState.stopped;
-        notifyListeners();
+        if (!_disposed) {
+          _currentPlayingMessageId = null;
+          _state = RCKAudioPlayerState.stopped;
+          notifyListeners();
+        }
       }
     } else {
       bool autoPlay = true;
-      if (filePath != null && !File(filePath).existsSync()) {
+      if (filePath != null && !kIsWeb && !File(filePath).existsSync()) {
         autoPlay = false;
       }
 
@@ -105,8 +120,15 @@ class RCKAudioPlayerProvider extends ChangeNotifier
   }
 
   Future<void> stopVoiceMessage({bool notify = true}) async {
+    if (_disposed) return;
+
     _currentPlayingMessageId = null;
     _state = RCKAudioPlayerState.stopped;
+
+    // 取消播放状态监听
+    _playerStateSubscription?.cancel();
+    _playerStateSubscription = null;
+
     if (!notify) {
       if (_player.playerState.playing) {
         _player.stop();
@@ -115,11 +137,15 @@ class RCKAudioPlayerProvider extends ChangeNotifier
       if (_player.playerState.playing) {
         await _player.stop();
       }
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
     }
   }
 
   Future<void> pauseVoiceMessage({bool notify = true}) async {
+    if (_disposed) return;
+
     _state = RCKAudioPlayerState.paused;
     if (!notify) {
       if (_player.playerState.playing) {
@@ -129,7 +155,9 @@ class RCKAudioPlayerProvider extends ChangeNotifier
       if (_player.playerState.playing) {
         await _player.pause();
       }
-      notifyListeners();
+      if (!_disposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -157,7 +185,9 @@ class RCKAudioPlayerProvider extends ChangeNotifier
 
   @override
   void dispose() {
+    _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
+    _playerStateSubscription?.cancel();
     _player.dispose();
     super.dispose();
   }

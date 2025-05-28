@@ -70,10 +70,7 @@ class RCKVoiceRecordProvider extends ChangeNotifier
       voiceStartTime = DateTime.now();
 
       RCIMWrapperPlatform.instance.writeLog(
-          'RCKVoiceRecordProvider startRecord',
-          '',
-          0,
-          'voicePath: $voicePath');
+          'RCKVoiceRecordProvider startRecord', '', 0, 'voicePath: $voicePath');
 
       _volumeTimer?.cancel();
       _volumeTimer =
@@ -89,10 +86,7 @@ class RCKVoiceRecordProvider extends ChangeNotifier
             notifyListeners();
           } catch (e) {
             RCIMWrapperPlatform.instance.writeLog(
-                'RCKVoiceRecordProvider record error',
-                '',
-                0,
-                'error: $e');
+                'RCKVoiceRecordProvider record error', '', 0, 'error: $e');
             if (kDebugMode) {
               print('Error getting volume: $e');
             }
@@ -144,10 +138,7 @@ class RCKVoiceRecordProvider extends ChangeNotifier
       return voicePath;
     } catch (e) {
       RCIMWrapperPlatform.instance.writeLog(
-          'RCKVoiceRecordProvider finishRecord error',
-          '',
-          0,
-          'error: $e');
+          'RCKVoiceRecordProvider finishRecord error', '', 0, 'error: $e');
       if (kDebugMode) {
         print('Error stopping recording: $e');
       }

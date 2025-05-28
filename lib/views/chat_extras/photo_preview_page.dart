@@ -1,6 +1,6 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'dart:io' if (dart.library.html) 'dart:html';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
@@ -54,7 +54,7 @@ class _PhotoPreviewPageState extends State<RCKPhotoPreviewPage> {
     // 优先使用本地地址，如果没有则使用远程地址
     if (message.local?.isNotEmpty == true) {
       String filePath = message.local!;
-      if (filePath.startsWith('file://') && Platform.isAndroid) {
+      if (!kIsWeb && filePath.startsWith('file://') && Platform.isAndroid) {
         filePath = filePath.substring(7);
       }
       return filePath;
@@ -65,6 +65,16 @@ class _PhotoPreviewPageState extends State<RCKPhotoPreviewPage> {
   }
 
   Future<void> _saveImage(String url) async {
+    // 在 Web 平台上不支持保存到相册
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Web 平台不支持保存到相册')),
+        );
+      }
+      return;
+    }
+
     try {
       if (url.startsWith('http')) {
         final response = await Dio().get(
@@ -176,7 +186,7 @@ class _PhotoPreviewPageState extends State<RCKPhotoPreviewPage> {
           initialScale: PhotoViewComputedScale.contained,
         ),
       );
-    } else if (url.isNotEmpty) {
+    } else if (url.isNotEmpty && !kIsWeb) {
       return GestureDetector(
         onLongPress: () => _showSaveMenu(context, url),
         child: PhotoView(

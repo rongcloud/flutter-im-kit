@@ -146,8 +146,19 @@ class RCKChatPageState extends State<RCKChatPage> {
 
   @override
   void dispose() {
-    audioPlayerProvider.stopVoiceMessage(notify: false);
-    voiceRecordProvider.cancelRecord();
+    // 安全地停止音频播放和录音
+    try {
+      audioPlayerProvider.stopVoiceMessage(notify: false);
+    } catch (e) {
+      debugPrint('AudioPlayerProvider dispose error: $e');
+    }
+
+    try {
+      voiceRecordProvider.cancelRecord();
+    } catch (e) {
+      debugPrint('VoiceRecordProvider dispose error: $e');
+    }
+
     super.dispose();
   }
 
