@@ -1,5 +1,6 @@
 allprojects {
     repositories {
+        maven {url  "https://maven.rongcloud.cn/repository/maven-releases/"}
         google()
         mavenCentral()
     }

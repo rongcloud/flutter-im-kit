@@ -54,6 +54,12 @@ class LastMessageWidget extends StatelessWidget {
     bool isSending = sentStatus == RCIMIWSentStatus.sending;
     bool isFail = sentStatus == RCIMIWSentStatus.failed;
 
+    if (conversation.lastMessage == null ||
+        conversation.lastMessage?.messageType == RCIMIWMessageType.unknown) {
+      isSending = false;
+      isFail = false;
+    }
+
     if (conversation.lastMessage != null) {
       final message = conversation.lastMessage;
 

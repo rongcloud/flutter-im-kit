@@ -1,6 +1,6 @@
 name: rongcloud_im_kit
-description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-use chat UI components, conversation lists, and messaging features for rapid integration of instant messaging capabilities into Flutter applications."
-version: 1.0.0+1
+description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-use chat UI components, conversation lists into Flutter applications."
+version: 1.0.0+2
 homepage: https://www.rongcloud.cn/
 repository: https://github.com/rongcloud/flutter-im-kit
 
