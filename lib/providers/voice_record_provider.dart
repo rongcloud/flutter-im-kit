@@ -111,7 +111,9 @@ class RCKVoiceRecordProvider extends ChangeNotifier
       _volumeTimer?.cancel();
       currentVolume = 0.0;
       voiceEndTime = DateTime.now();
-      voicePath = await _recorder.stop() ?? '';
+      if (await _recorder.isRecording()) {
+        voicePath = await _recorder.stop() ?? '';
+      }
 
       setVoiceSendingType(RCIMIWMessageVoiceSendingType.notStart);
 

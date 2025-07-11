@@ -97,7 +97,9 @@ class VoiceRecordButtonState extends State<VoiceRecordButton> {
               _inPermissionPointerUp = true;
               return;
             }
-            if (_isInButton) {
+            if (_isInButton &&
+                provider.voiceSendingType !=
+                    RCIMIWMessageVoiceSendingType.notStart) {
               await provider.finishRecord(context);
             } else {
               provider.cancelRecord();

@@ -112,7 +112,7 @@ class RCKChatProvider extends ChangeNotifier {
         curCon.conversationType ?? RCIMIWConversationType.invalid,
         curCon.targetId ?? '',
         curCon.channelId,
-        curCon.lastMessage?.sentTime ?? DateTime.now().millisecondsSinceEpoch,
+        messages.last.sentTime ?? DateTime.now().millisecondsSinceEpoch,
         callback: IRCIMIWClearUnreadCountCallback(
       onUnreadCountCleared: (code) {
         _isClearingUnread = false;
@@ -124,9 +124,9 @@ class RCKChatProvider extends ChangeNotifier {
             curCon.conversationType ?? RCIMIWConversationType.invalid,
             curCon.targetId ?? '',
             curCon.channelId,
-            curCon.lastMessage?.sentTime ?? DateTime.now().millisecondsSinceEpoch, callback:
-                IRCIMIWSyncConversationReadStatusCallback(
-                    onConversationReadStatusSynced: (code) {
+            messages.last.sentTime ?? DateTime.now().millisecondsSinceEpoch,
+            callback: IRCIMIWSyncConversationReadStatusCallback(
+                onConversationReadStatusSynced: (code) {
           if (code == 0) {
             debugPrint('同步会话阅读状态成功');
           }
