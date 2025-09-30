@@ -3,7 +3,6 @@ description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-us
 version: 1.0.1
 homepage: https://www.rongcloud.cn/
 repository: https://github.com/rongcloud/flutter-im-kit
-publish_to: none
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
