@@ -282,7 +282,7 @@ class RCKItemConfig {
     this.padding = const EdgeInsets.symmetric(
         vertical: itemVerticalPadding, horizontal: itemHorizontalPadding),
     this.cellSpacing = 0.0,
-  }) ;
+  });
 }
 
 /// 元素布局配置

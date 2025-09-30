@@ -1,15 +1,24 @@
 import 'dart:io' if (dart.library.html) 'dart:html';
 
 import 'package:flutter/foundation.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:convert';
+import 'package:image_size_getter/image_size_getter.dart';
+import 'package:image_size_getter/file_input.dart';
 // ignore: implementation_imports
 import 'package:rongcloud_im_wrapper_plugin/src/rongcloud_im_wrapper_platform_interface.dart';
 
 class ImageUtil {
   /// 用于缓存已经decode的base64图片数据
   static final Map<String, Uint8List> _base64Cache = {};
+
+  /// 用于缓存base64图片的天然像素尺寸
+  static final Map<String, ui.Size> _base64SizeCache = {};
+
+  /// 用于缓存本地文件图片的天然像素尺寸
+  static final Map<String, ui.Size> _filePathSizeCache = {};
 
   /// 获取base64缓存的大小
   static int get base64CacheSize => _base64Cache.length;
@@ -50,6 +59,58 @@ class ImageUtil {
     final keysToRemove = _base64Cache.keys.take(_base64Cache.length - maxSize);
     for (final key in keysToRemove.toList()) {
       _base64Cache.remove(key);
+    }
+  }
+
+  /// 获取 base64 图片的天然像素尺寸（使用 image_size_getter，命中缓存则直接返回）
+  static ui.Size? getBase64NaturalSize(String base64String) {
+    if (base64String.isEmpty) return null;
+    if (_base64SizeCache.containsKey(base64String)) {
+      return _base64SizeCache[base64String];
+    }
+
+    final Uint8List? bytes = getDecodedBase64(base64String);
+    if (bytes == null) return null;
+    try {
+      final result = ImageSizeGetter.getSizeResult(MemoryInput(bytes));
+      final size =
+          ui.Size(result.size.width.toDouble(), result.size.height.toDouble());
+      _base64SizeCache[base64String] = size;
+      return size;
+    } catch (e) {
+      RCIMWrapperPlatform.instance
+          .writeLog('ImageUtil getBase64NaturalSize error', '', 0, 'error: $e');
+      return null;
+    }
+  }
+
+  /// 获取本地文件图片的天然像素尺寸（使用 image_size_getter，命中缓存则直接返回）
+  /// [filePath] 支持普通路径或以 file:// 开头的路径
+  static ui.Size? getFileNaturalSize(String filePath) {
+    if (filePath.isEmpty) return null;
+    String path = filePath;
+    if (path.startsWith('file://')) {
+      path = path.substring(7);
+    }
+    if (_filePathSizeCache.containsKey(path)) {
+      return _filePathSizeCache[path];
+    }
+
+    try {
+      final file = File(path);
+      if (!file.existsSync()) return null;
+      final result = ImageSizeGetter.getSizeResult(FileInput(file));
+      final size =
+          ui.Size(result.size.width.toDouble(), result.size.height.toDouble());
+      _filePathSizeCache[path] = size;
+      return size;
+    } catch (e) {
+      RCIMWrapperPlatform.instance.writeLog(
+          'ImageUtil getFileNaturalSize error',
+          '',
+          0,
+          'error: $e, path: $filePath');
+      return null;
     }
   }
 

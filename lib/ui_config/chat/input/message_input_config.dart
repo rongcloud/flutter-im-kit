@@ -97,7 +97,7 @@ class RCKMessageInputConfig {
   final RCKExtensionMenuConfig? extensionMenuConfig;
 
   RCKMessageInputConfig({
-    this.inputFieldConfig = const RCKInputFieldConfig(),
+    RCKInputFieldConfig? inputFieldConfig,
     this.leftButtonConfig = const RCKInputButtonConfig(),
     this.rightButtonsConfig = const <RCKInputButtonConfig>[],
     this.topButtonsConfig = const <RCKInputButtonConfig>[],
@@ -110,10 +110,11 @@ class RCKMessageInputConfig {
     this.dividerColor,
     this.quotePreviewConfig = const RCKQuotePreviewConfig(),
     this.extensionMenuConfig,
-  }) : backgroundColor = backgroundColor ??
+  })  : backgroundColor = backgroundColor ??
             (RCKThemeProvider().currentTheme == RCIMIWAppTheme.light
                 ? RCKThemeProvider().themeColor.bgAuxiliary1
-                : const Color(0xFF1D1D1D));
+                : const Color(0xFF1D1D1D)),
+        inputFieldConfig = inputFieldConfig ?? RCKInputFieldConfig();
 
   /// 创建一个新的配置实例并合并更改
   RCKMessageInputConfig copyWith({

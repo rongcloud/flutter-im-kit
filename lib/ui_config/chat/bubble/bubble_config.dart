@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
-import 'message_style_config.dart';
 
 /// 消息气泡形状
 enum BubbleShape {
@@ -65,6 +64,9 @@ class RCKBubbleConfig {
   /// 引用消息样式配置
   final RCKReferenceStyleConfig referenceStyleConfig;
 
+  /// 追加气泡样式配置（控制主气泡下方的附加面板样式）
+  final RCKAppendBubbleConfig appendBubbleConfig;
+
   RCKBubbleConfig({
     this.shape = BubbleShape.roundedRectangle,
     this.borderRadius = kBubbleBorderRadius,
@@ -84,6 +86,7 @@ class RCKBubbleConfig {
     this.sightStyleConfig = const RCKSightStyleConfig(),
     RCKFileStyleConfig? fileStyleConfig,
     this.referenceStyleConfig = const RCKReferenceStyleConfig(),
+    this.appendBubbleConfig = const RCKAppendBubbleConfig(),
   })  : senderColor = senderColor ??
             RCKThemeProvider().themeColor.bgAuxiliary2 ??
             const Color(0xFFE1FFC7),
@@ -157,6 +160,7 @@ class RCKBubbleConfig {
     RCKSightStyleConfig? sightStyleConfig,
     RCKFileStyleConfig? fileStyleConfig,
     RCKReferenceStyleConfig? referenceStyleConfig,
+    RCKAppendBubbleConfig? appendBubbleConfig,
   }) {
     return RCKBubbleConfig(
       senderColor: senderBubbleColor ?? senderColor,
@@ -170,6 +174,7 @@ class RCKBubbleConfig {
       sightStyleConfig: sightStyleConfig ?? this.sightStyleConfig,
       fileStyleConfig: fileStyleConfig ?? this.fileStyleConfig,
       referenceStyleConfig: referenceStyleConfig ?? this.referenceStyleConfig,
+      appendBubbleConfig: appendBubbleConfig ?? this.appendBubbleConfig,
     );
   }
 }

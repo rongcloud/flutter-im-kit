@@ -111,6 +111,8 @@ class RCKThemeIcon {
   final String? playVideoInMore;
   // 撤回图标路径
   final String? recall;
+  // 语音转文字图标路径
+  final String? speechToText;
 
   const RCKThemeIcon(
       {this.file,
@@ -168,7 +170,8 @@ class RCKThemeIcon {
       this.chatItemMultiUnselect,
       this.filming,
       this.playVideoInMore,
-      this.recall});
+      this.recall,
+      this.speechToText});
 
   static const RCKThemeIcon light = RCKThemeIcon(
     file: "assets/RCLightIcon/File.png",
@@ -227,6 +230,7 @@ class RCKThemeIcon {
     filming: "assets/RCLightIcon/filming.png",
     playVideoInMore: "assets/RCLightIcon/play_video.png",
     recall: "assets/RCLightIcon/recall.png",
+    speechToText: "assets/RCLightIcon/STT.png",
   );
 
   static const RCKThemeIcon dark = RCKThemeIcon(
@@ -286,6 +290,7 @@ class RCKThemeIcon {
     filming: "assets/RCDarkIcon/filming.png",
     playVideoInMore: "assets/RCDarkIcon/play_video.png",
     recall: "assets/RCDarkIcon/recall.png",
+    speechToText: "assets/RCDarkIcon/STT.png",
   );
 
   RCKThemeIcon copyWith({
@@ -345,6 +350,7 @@ class RCKThemeIcon {
     String? filming,
     String? playVideoInMore,
     String? recall,
+    String? speechToText,
   }) {
     return RCKThemeIcon(
       file: file ?? this.file,
@@ -404,6 +410,7 @@ class RCKThemeIcon {
       filming: filming ?? this.filming,
       playVideoInMore: playVideoInMore ?? this.playVideoInMore,
       recall: recall ?? this.recall,
+      speechToText: speechToText ?? this.speechToText,
     );
   }
 }

@@ -1,14 +1,15 @@
 import 'dart:io' if (dart.library.html) 'dart:html';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:rongcloud_im_kit/views/chat/input/message_input_widget.dart';
 import 'package:video_player/video_player.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+import 'package:wechat_camera_picker/wechat_camera_picker.dart';
+import 'package:photo_manager/photo_manager.dart' as pm;
 // ignore: implementation_imports
 import 'package:rongcloud_im_wrapper_plugin/src/rongcloud_im_wrapper_platform_interface.dart';
 
@@ -21,7 +22,6 @@ typedef GridItemBuilder = Widget Function(
 class GridButtonWidget extends StatefulWidget {
   final List<RCKExtensionMenuItemConfig> items;
   final RCKExtensionMenuConfig? config;
-  static final ImagePicker _picker = ImagePicker();
 
   // 新增Grid项的Builder
   final GridItemBuilder? gridItemBuilder;
@@ -44,379 +44,6 @@ class GridButtonWidget extends StatefulWidget {
     );
   }
 
-  static List<RCKExtensionMenuItemConfig> getDefaultGridItems(
-      BuildContext context,
-      {TapBeforePermissionCallback? onTapBeforePermission}) {
-    return [
-      RCKExtensionMenuItemConfig(
-        title: '照片',
-        icon: ImageUtil.getImageWidget(
-            RCKThemeProvider().themeIcon.gallery ?? ''),
-        onTap: () async {
-          // 检查相册权限
-          Permission checkPermission;
-          if (Platform.isAndroid) {
-            final androidInfo = await DeviceInfoPlugin().androidInfo;
-            if (androidInfo.version.sdkInt <= 32) {
-              checkPermission = Permission.storage;
-            } else {
-              checkPermission = Permission.photos;
-            }
-          } else {
-            checkPermission = Permission.photos;
-          }
-          if (onTapBeforePermission != null && context.mounted) {
-            onTapBeforePermission(context, checkPermission);
-          }
-          final status = await checkPermission.request();
-
-          if (status.isGranted) {
-            // 有权限
-            if (context.mounted) {
-              context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
-            }
-            List<XFile> imageFileList = await _picker.pickMultiImage();
-
-            String imageFileListString = '';
-            for (int i = 0; i < imageFileList.length; i++) {
-              imageFileListString += imageFileList[i].path;
-              if (i < imageFileList.length - 1) {
-                imageFileListString += '|';
-              }
-            }
-            RCIMWrapperPlatform.instance.writeLog(
-                'GridButtonWidget pickMultiImage',
-                '',
-                0,
-                'imageFileList: $imageFileListString');
-
-            for (int i = 0; i < imageFileList.length; i++) {
-              XFile imageFile = imageFileList[i];
-              if (imageFile.mimeType == 'image/gif' ||
-                  imageFile.path.endsWith('.gif')) {
-                if (context.mounted) {
-                  await context
-                      .read<RCKChatProvider>()
-                      .addGifMessage(imageFile.path);
-                }
-              } else {
-                if (context.mounted) {
-                  await context
-                      .read<RCKChatProvider>()
-                      .addImageMessage(imageFile.path);
-                }
-              }
-            }
-          } else {
-            // 权限被拒绝，显示提示
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('提示'),
-                  content: const Text('需要相册权限才能选择图片'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('确定'),
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '视频',
-        icon: ImageUtil.getImageWidget(
-            RCKThemeProvider().themeIcon.playVideoInMore ?? '',
-            color: RCKThemeProvider().themeColor.textPrimary),
-        onTap: () async {
-          // 检查相册权限
-          Permission checkPermission;
-          if (Platform.isAndroid) {
-            final androidInfo = await DeviceInfoPlugin().androidInfo;
-            if (androidInfo.version.sdkInt <= 32) {
-              checkPermission = Permission.storage;
-            } else {
-              checkPermission = Permission.photos;
-            }
-          } else {
-            checkPermission = Permission.photos;
-          }
-          if (onTapBeforePermission != null && context.mounted) {
-            onTapBeforePermission(context, checkPermission);
-          }
-          final status = await checkPermission.request();
-
-          if (status.isGranted) {
-            // 有权限
-            if (context.mounted) {
-              context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
-            }
-            XFile? imageFile =
-                await _picker.pickVideo(source: ImageSource.gallery);
-            if (imageFile != null) {
-              // 在 Web 平台上不支持本地文件访问
-              if (kIsWeb) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Web 平台不支持视频文件处理')),
-                  );
-                }
-                return;
-              }
-
-              // 获取视频时长
-              final VideoPlayerController controller =
-                  VideoPlayerController.file(File(imageFile.path));
-              await controller.initialize();
-              final Duration duration = controller.value.duration;
-              debugPrint('视频时长：${duration.inSeconds} 秒');
-              await controller.dispose();
-
-              RCIMWrapperPlatform.instance.writeLog(
-                  'GridButtonWidget pickVideo',
-                  '',
-                  0,
-                  'imageFile: ${imageFile.path} duration: ${duration.inSeconds}');
-
-              if (context.mounted) {
-                context
-                    .read<RCKChatProvider>()
-                    .addSightMessage(imageFile.path, duration.inSeconds);
-              }
-            }
-          } else {
-            // 权限被拒绝，显示提示
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('提示'),
-                  content: const Text('需要相册权限才能选择视频'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('确定'),
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '拍照',
-        icon:
-            ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.camera ?? ''),
-        onTap: () async {
-          // 检查相机权限
-          Permission checkPermission = Permission.camera;
-          if (onTapBeforePermission != null) {
-            onTapBeforePermission(context, checkPermission);
-          }
-          final status = await checkPermission.request();
-          if (status.isGranted) {
-            // 有权限
-            if (context.mounted) {
-              context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
-            }
-            XFile? pickMedia =
-                await _picker.pickImage(source: ImageSource.camera);
-
-            RCIMWrapperPlatform.instance.writeLog('GridButtonWidget pickImage',
-                '', 0, 'pickMedia: ${pickMedia?.path}');
-
-            if (pickMedia != null) {
-              if (context.mounted) {
-                context.read<RCKChatProvider>().addImageMessage(pickMedia.path);
-              }
-            }
-          } else {
-            // 权限被拒绝，显示提示
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('提示'),
-                  content: const Text('需要相机权限才能拍照'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('确定')),
-                  ],
-                ),
-              );
-            }
-          }
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '拍摄',
-        icon: ImageUtil.getImageWidget(
-            RCKThemeProvider().themeIcon.filming ?? '',
-            color: RCKThemeProvider().themeColor.textPrimary),
-        onTap: () async {
-          // 检查相机权限
-          Permission checkPermission = Permission.camera;
-          if (onTapBeforePermission != null) {
-            onTapBeforePermission(context, checkPermission);
-          }
-          final status = await checkPermission.request();
-          if (status.isGranted) {
-            // 有权限
-            if (context.mounted) {
-              context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
-            }
-            XFile? pickMedia = await _picker.pickVideo(
-                source: ImageSource.camera,
-                maxDuration: const Duration(seconds: 119));
-            if (pickMedia != null) {
-              // 在 Web 平台上不支持本地文件访问
-              if (kIsWeb) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Web 平台不支持视频文件处理')),
-                  );
-                }
-                return;
-              }
-
-              VideoPlayerController videoPlayerController =
-                  VideoPlayerController.file(
-                      File(pickMedia.path)); //Your file here
-              await videoPlayerController.initialize();
-              int videoDuration =
-                  videoPlayerController.value.duration.inSeconds;
-
-              RCIMWrapperPlatform.instance.writeLog(
-                  'GridButtonWidget pickVideo',
-                  '',
-                  0,
-                  'pickMedia: ${pickMedia.path} duration: $videoDuration');
-
-              if (videoDuration <= 1) {
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('提示'),
-                      content: const Text('视频时长不能小于1秒'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('确定')),
-                      ],
-                    ),
-                  );
-                }
-                return;
-              }
-              if (context.mounted) {
-                context
-                    .read<RCKChatProvider>()
-                    .addSightMessage(pickMedia.path, videoDuration);
-              }
-              await videoPlayerController.dispose();
-            }
-          } else {
-            // 权限被拒绝，显示提示
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('提示'),
-                  content: const Text('需要相机权限才能拍摄'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('确定')),
-                  ],
-                ),
-              );
-            }
-          }
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '位置',
-        icon:
-            ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.local ?? ''),
-        onTap: () async {},
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '文件',
-        icon: ImageUtil.getImageWidget(
-            RCKThemeProvider().themeIcon.document ?? ''),
-        onTap: () async {
-          // 检查文件权限
-          final Permission checkPermission = !kIsWeb && Platform.isAndroid
-              ? Permission.manageExternalStorage
-              : Permission.storage;
-          if (onTapBeforePermission != null) {
-            onTapBeforePermission(context, checkPermission);
-          }
-          final status = await checkPermission.request();
-          if (status.isGranted) {
-            // 有权限
-            FilePickerResult? res = await FilePicker.platform.pickFiles();
-            if (res != null) {
-              String resString = '';
-              for (int i = 0; i < res.files.length; i++) {
-                resString += res.files[i].path ?? '';
-                if (i < res.files.length - 1) {
-                  resString += '|';
-                }
-              }
-
-              RCIMWrapperPlatform.instance.writeLog(
-                  'GridButtonWidget pickFiles', '', 0, 'res: $resString');
-
-              if (context.mounted) {
-                context
-                    .read<RCKChatProvider>()
-                    .addFileMessage(res.files.single.path!);
-              }
-            }
-          } else {
-            // 权限被拒绝，显示提示
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('提示'),
-                  content: const Text('需要文件权限才能选择文件'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('确定')),
-                  ],
-                ),
-              );
-            }
-          }
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-      RCKExtensionMenuItemConfig(
-        title: '礼物',
-        icon: ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.gift ?? ''),
-        onTap: () {
-          // 处理红包
-        },
-        iconSize: kInputExtentionIconSize,
-      ),
-    ];
-  }
-
   @override
   GridButtonWidgetState createState() => GridButtonWidgetState();
 }
@@ -427,6 +54,8 @@ class GridButtonWidgetState extends State<GridButtonWidget> {
 
   // 默认配置，当widget.config为null时使用
   static const _defaultConfig = RCKExtensionMenuConfig();
+  // 标题区域高度，统一用于计算 childAspectRatio 与项容器高度，保持原有高度
+  static const double _titleAreaHeight = 22.0;
 
   @override
   void initState() {
@@ -467,8 +96,8 @@ class GridButtonWidgetState extends State<GridButtonWidget> {
       mainAxisSpacing: _config.mainAxisSpacing,
       crossAxisSpacing: _config.crossAxisSpacing,
       padding: _config.padding,
-      childAspectRatio:
-          kInputExtentionItemSize / (kInputExtentionItemSize + 22),
+      childAspectRatio: kInputExtentionItemSize /
+          (kInputExtentionItemSize + _titleAreaHeight),
       physics: const NeverScrollableScrollPhysics(),
       children: items.map((item) => _buildGridItem(item)).toList(),
     );
@@ -481,10 +110,16 @@ class GridButtonWidgetState extends State<GridButtonWidget> {
     }
 
     return InkWell(
-        onTap: item.onTap,
+        onTap: () async {
+          if (item.onTapWithContext != null) {
+            await item.onTapWithContext!(context);
+          } else {
+            item.onTap?.call();
+          }
+        },
         child: SizedBox(
             width: kInputExtentionItemSize,
-            height: kInputExtentionItemSize + 22,
+            height: kInputExtentionItemSize + _titleAreaHeight,
             child: Column(
               children: [
                 Container(
@@ -505,9 +140,18 @@ class GridButtonWidgetState extends State<GridButtonWidget> {
                 const SizedBox(height: 8),
                 Text(
                   item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  strutStyle: const StrutStyle(
+                    forceStrutHeight: true,
+                    height: 1.0,
+                    leading: 0,
+                  ),
                   style: item.titleStyle ??
                       TextStyle(
                         fontSize: kInputExtentionItemFontSize,
+                        height: 1.0,
                         color: RCKThemeProvider().themeColor.textSecondary,
                       ),
                 ),
@@ -561,4 +205,374 @@ class GridButtonWidgetState extends State<GridButtonWidget> {
       ),
     );
   }
+}
+
+List<RCKExtensionMenuItemConfig> getDefaultGridItems(
+    {TapBeforePermissionCallback? onTapBeforePermission}) {
+  return [
+    RCKExtensionMenuItemConfig(
+      title: '照片',
+      icon:
+          ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.gallery ?? ''),
+      onTapWithContext: (context) async {
+        // 检查相册权限
+        Permission checkPermission;
+        if (Platform.isAndroid) {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          if (androidInfo.version.sdkInt <= 32) {
+            checkPermission = Permission.storage;
+          } else {
+            checkPermission = Permission.photos;
+          }
+        } else {
+          checkPermission = Permission.photos;
+        }
+        if (onTapBeforePermission != null && context.mounted) {
+          await onTapBeforePermission(context, checkPermission);
+        }
+        final status = await checkPermission.request();
+
+        if (status.isGranted) {
+          // 有权限
+          if (context.mounted) {
+            context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
+          }
+
+          List<AssetEntity>? assets = [];
+          if (context.mounted) {
+            assets = await AssetPicker.pickAssets(
+              context,
+              pickerConfig: AssetPickerConfig(
+                requestType: RequestType.image,
+                maxAssets: 50,
+                textDelegate: const AssetPickerTextDelegate(),
+              ),
+            );
+          }
+
+          if (assets == null || assets.isEmpty) return;
+
+          String imageFileListString = '';
+          for (int i = 0; i < assets.length; i++) {
+            final asset = assets[i];
+            final file = await asset.file;
+            final path = file?.path ?? '';
+            imageFileListString += path;
+            if (i < assets.length - 1) imageFileListString += '|';
+
+            if (path.isEmpty) continue;
+            final mime = asset.mimeType ?? '';
+            if (mime == 'image/gif' || path.toLowerCase().endsWith('.gif')) {
+              if (context.mounted) {
+                await context.read<RCKChatProvider>().addGifMessage(path);
+              }
+            } else {
+              if (context.mounted) {
+                await context.read<RCKChatProvider>().addImageMessage(path);
+              }
+            }
+          }
+          RCIMWrapperPlatform.instance.writeLog(
+              'GridButtonWidget pickAssets(images)',
+              '',
+              0,
+              imageFileListString);
+        } else {
+          // 权限被拒绝，显示提示
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('提示'),
+                content: const Text('需要相册权限才能选择图片'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('确定'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      },
+      iconSize: kInputExtentionIconSize,
+    ),
+    RCKExtensionMenuItemConfig(
+      title: '视频',
+      icon: ImageUtil.getImageWidget(
+          RCKThemeProvider().themeIcon.playVideoInMore ?? '',
+          color: RCKThemeProvider().themeColor.textPrimary),
+      onTapWithContext: (context) async {
+        // 检查相册权限
+        Permission checkPermission;
+        if (Platform.isAndroid) {
+          final androidInfo = await DeviceInfoPlugin().androidInfo;
+          if (androidInfo.version.sdkInt <= 32) {
+            checkPermission = Permission.storage;
+          } else {
+            checkPermission = Permission.photos;
+          }
+        } else {
+          checkPermission = Permission.photos;
+        }
+        if (onTapBeforePermission != null && context.mounted) {
+          await onTapBeforePermission(context, checkPermission);
+        }
+        final status = await checkPermission.request();
+
+        if (status.isGranted) {
+          // 有权限
+          if (context.mounted) {
+            context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
+          }
+
+          List<AssetEntity>? result = [];
+          if (context.mounted) {
+            result = await AssetPicker.pickAssets(
+              context,
+              pickerConfig: AssetPickerConfig(
+                requestType: RequestType.video,
+                maxAssets: 1,
+                filterOptions: pm.FilterOptionGroup()
+                  ..setOption(
+                    pm.AssetType.video,
+                    const pm.FilterOption(
+                      durationConstraint:
+                          pm.DurationConstraint(max: Duration(seconds: 11)),
+                    ),
+                  ),
+                textDelegate: const AssetPickerTextDelegate(),
+              ),
+            );
+          }
+
+          if (result != null && result.isNotEmpty) {
+            final AssetEntity picked = result.first;
+            final file = await picked.file;
+            final path = file?.path;
+            final durationSec = picked.duration;
+            if (path == null || path.isEmpty) return;
+            // 获取视频时长（双保险）
+            if (durationSec > 10) {
+              if (context.mounted) {
+                await showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('提示'),
+                    content: const Text('视频时长不能超过10秒'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('确定'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return;
+            }
+            RCIMWrapperPlatform.instance.writeLog('GridButtonWidget pickVideo',
+                '', 0, 'video: $path duration: $durationSec');
+
+            if (context.mounted) {
+              context
+                  .read<RCKChatProvider>()
+                  .addSightMessage(path, durationSec);
+            }
+          }
+        } else {
+          // 权限被拒绝，显示提示
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('提示'),
+                content: const Text('需要相册权限才能选择视频'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('确定'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      },
+      iconSize: kInputExtentionIconSize,
+    ),
+    RCKExtensionMenuItemConfig(
+      title: '拍照',
+      icon: ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.camera ?? ''),
+      onTapWithContext: (context) async {
+        // 检查相机权限
+        Permission checkPermission = Permission.camera;
+        if (onTapBeforePermission != null) {
+          await onTapBeforePermission(context, checkPermission);
+        }
+        final status = await checkPermission.request();
+        if (status.isGranted) {
+          // 有权限
+          if (context.mounted) {
+            context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
+          }
+
+          AssetEntity? shot;
+          if (context.mounted) {
+            shot = await CameraPicker.pickFromCamera(
+              context,
+              pickerConfig: const CameraPickerConfig(
+                enableRecording: false,
+                textDelegate: CameraPickerTextDelegate(),
+              ),
+            );
+          }
+
+          final file = await shot?.file;
+          final String? path = file?.path;
+          RCIMWrapperPlatform.instance
+              .writeLog('GridButtonWidget cameraPhoto', '', 0, 'path: $path');
+
+          if (path != null && path.isNotEmpty) {
+            if (context.mounted) {
+              context.read<RCKChatProvider>().addImageMessage(path);
+            }
+          }
+        } else {
+          // 权限被拒绝，显示提示
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('提示'),
+                content: const Text('需要相机权限才能拍照'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定')),
+                ],
+              ),
+            );
+          }
+        }
+      },
+      iconSize: kInputExtentionIconSize,
+    ),
+    RCKExtensionMenuItemConfig(
+      title: '拍摄',
+      icon: ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.filming ?? '',
+          color: RCKThemeProvider().themeColor.textPrimary),
+      onTapWithContext: (context) async {
+        // 检查相机权限
+        Permission checkPermission = Permission.camera;
+        if (onTapBeforePermission != null) {
+          await onTapBeforePermission(context, checkPermission);
+        }
+        final status = await checkPermission.request();
+        if (status.isGranted) {
+          // 有权限
+          if (context.mounted) {
+            context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
+          }
+
+          AssetEntity? pickMedia;
+          if (context.mounted) {
+            pickMedia = await CameraPicker.pickFromCamera(
+              context,
+              pickerConfig: const CameraPickerConfig(
+                enableRecording: true,
+                onlyEnableRecording: true,
+                enableTapRecording: true,
+                maximumRecordingDuration: Duration(seconds: 10),
+                textDelegate: CameraPickerTextDelegate(),
+              ),
+            );
+          }
+
+          if (pickMedia != null) {
+            final file = await pickMedia.file;
+            final String? capturedPath = file?.path;
+            if (capturedPath == null || capturedPath.isEmpty) return;
+
+            VideoPlayerController videoPlayerController =
+                VideoPlayerController.file(File(capturedPath));
+            await videoPlayerController.initialize();
+            int videoDuration = videoPlayerController.value.duration.inSeconds;
+
+            RCIMWrapperPlatform.instance.writeLog('GridButtonWidget pickVideo',
+                '', 0, 'pickMedia: $capturedPath duration: $videoDuration');
+
+            if (videoDuration <= 1) {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('提示'),
+                    content: const Text('视频时长不能小于1秒'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('确定')),
+                    ],
+                  ),
+                );
+              }
+              return;
+            }
+            if (context.mounted) {
+              context
+                  .read<RCKChatProvider>()
+                  .addSightMessage(capturedPath, videoDuration);
+            }
+            await videoPlayerController.dispose();
+          }
+        } else {
+          // 权限被拒绝，显示提示
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('提示'),
+                content: const Text('需要相机权限才能拍摄'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('确定')),
+                ],
+              ),
+            );
+          }
+        }
+      },
+      iconSize: kInputExtentionIconSize,
+    ),
+    RCKExtensionMenuItemConfig(
+      title: '文件',
+      icon:
+          ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.document ?? ''),
+      onTapWithContext: (context) async {
+        FilePickerResult? res = await FilePicker.platform.pickFiles();
+        if (res != null) {
+          String resString = '';
+          for (int i = 0; i < res.files.length; i++) {
+            resString += res.files[i].path ?? '';
+            if (i < res.files.length - 1) {
+              resString += '|';
+            }
+          }
+
+          RCIMWrapperPlatform.instance
+              .writeLog('GridButtonWidget pickFiles', '', 0, 'res: $resString');
+
+          if (context.mounted) {
+            context
+                .read<RCKChatProvider>()
+                .addFileMessage(res.files.single.path!);
+          }
+        }
+      },
+      iconSize: kInputExtentionIconSize,
+    ),
+  ];
 }

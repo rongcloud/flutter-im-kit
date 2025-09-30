@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rongcloud_im_kit/providers/message_input_provider.dart';
+import 'package:rongcloud_im_kit/utils/constants.dart';
 import 'package:rongcloud_im_kit/views/chat/page/message_list_widget.dart';
 import 'package:rongcloud_im_wrapper_plugin/rongcloud_im_wrapper_plugin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'engine_provider.dart';
 import 'audio_player_provider.dart';
 // ignore: implementation_imports
@@ -44,11 +46,24 @@ class RCKChatProvider extends ChangeNotifier {
 
   double _scrollOffset = 0;
 
+  Set<int> _speechToTextMessageIdsVisible = {};
+
+  Set<int> get speechToTextMessageIdsVisible => _speechToTextMessageIdsVisible;
+
+  //界面上语音转文字已经展示过，未展示过的需要有动画
+  List<int> _speechToTextMessageIdsHasShown = [];
+
+  List<int> get speechToTextMessageIdsHasShown =>
+      _speechToTextMessageIdsHasShown;
+
   RCKChatProvider({required this.engineProvider}) {
     engineProvider.receiveMessageNotifier.addListener(_onReceiveMessage);
     engineProvider.failedMessageSentNotifier.addListener(_onFailedMessageSent);
     engineProvider.recallMessageNotifier.addListener(_onRecallMessage);
     engineProvider.networkChangeNotifier.addListener(_onNetworkChange);
+    engineProvider.speechToTextMessageNotifier
+        .addListener(_onSpeechToTextCompleted);
+    _initSpeechToTextUIInfo();
   }
 
   void _onNetworkChange() {
@@ -67,7 +82,7 @@ class RCKChatProvider extends ChangeNotifier {
 
       // 操作移到下一帧
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        messageListScrollToBottom(noAnimation: false);
+        messageListScrollToBottom();
       });
     }
   }
@@ -95,6 +110,12 @@ class RCKChatProvider extends ChangeNotifier {
           _messages[i] = recallMessage;
           break;
         }
+      }
+
+      if (selectedMessages.isNotEmpty) {
+        selectedMessages.removeWhere((msg) =>
+            msg.messageId != null &&
+            msg.messageId == recallMessage.messageId);
       }
       notifyListeners();
     }
@@ -185,7 +206,7 @@ class RCKChatProvider extends ChangeNotifier {
             notifyListeners();
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              messageListScrollToBottom(noAnimation: true);
+              messageListScrollToBottom();
             });
             onSuccess?.call();
             RCIMWrapperPlatform.instance.writeLog(
@@ -406,7 +427,7 @@ class RCKChatProvider extends ChangeNotifier {
       if (!isResend) {
         // 操作移到下一帧
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          messageListScrollToBottom(noAnimation: true);
+          messageListScrollToBottom();
         });
       }
     }
@@ -678,10 +699,10 @@ class RCKChatProvider extends ChangeNotifier {
     return completer.future;
   }
 
-  void messageListScrollToBottom({bool? noAnimation}) {
+  void messageListScrollToBottom() {
     final messageListState = _messageListKey.currentState;
     if (messageListState != null) {
-      messageListState.scrollToLatestMessage(noAnimation: noAnimation);
+      messageListState.scrollToLatestMessage();
     }
   }
 
@@ -723,6 +744,134 @@ class RCKChatProvider extends ChangeNotifier {
     }
   }
 
+  void _onSpeechToTextCompleted() {
+    final speechToTextMessage =
+        engineProvider.speechToTextMessageNotifier.value;
+    if (speechToTextMessage != null) {
+      for (int i = 0; i < _messages.length; i++) {
+        if (_messages[i].messageUId == speechToTextMessage.messageUId) {
+          (_messages[i] as RCIMIWVoiceMessage).speechToTextInfo =
+              speechToTextMessage.speechToTextInfo;
+          if (speechToTextMessage.speechToTextInfo?.status ==
+              RCIMIWSpeechToTextStatus.failed) {
+            // final ctx = _messageListKey.currentContext;
+            // if (ctx != null && speechToTextFailShowToast) {
+            //   ScaffoldMessenger.of(ctx).showSnackBar(
+            //     const SnackBar(content: Text('转文字失败，请稍后重试')),
+            //   );
+            // }
+          }
+          break;
+        }
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> voiceMessageToText(RCIMIWVoiceMessage message) async {
+    if (message.messageUId == null || message.messageId == null) {
+      return;
+    }
+    engineProvider.engine?.requestSpeechToTextForMessage(message.messageUId!,
+        callback: IRCIMIWOperationCallback(
+          onSuccess: () {
+            debugPrint('requestSpeechToTextForMessage success');
+          },
+          onError: (code) {
+            debugPrint('requestSpeechToTextForMessage error: $code');
+            for (int i = 0; i < _messages.length; i++) {
+              if (_messages[i].messageId == message.messageId) {
+                (_messages[i] as RCIMIWVoiceMessage).speechToTextInfo?.status =
+                    RCIMIWSpeechToTextStatus.failed;
+                final ctx = _messageListKey.currentContext;
+                if (ctx != null) {
+                  String errorMessage = '转文字失败，请稍后重试';
+                  switch (code) {
+                    case 30002:
+                      errorMessage = '当前网络不可用，无法转文字，请检查网络设置后再试';
+                      break;
+                    case 35059:
+                      errorMessage = '此语音消息格式不支持转文字功能';
+                  }
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(errorMessage)),
+                  );
+                }
+                notifyListeners();
+                break;
+              }
+            }
+          },
+        ));
+    for (int i = 0; i < _messages.length; i++) {
+      if (_messages[i].messageId == message.messageId) {
+        (_messages[i] as RCIMIWVoiceMessage).speechToTextInfo?.status =
+            RCIMIWSpeechToTextStatus.converting;
+        break;
+      }
+    }
+    addSpeechToTextMessageIdVisible(message.messageId!);
+    notifyListeners();
+  }
+
+  void addSpeechToTextMessageIdVisible(int messageId) {
+    _speechToTextMessageIdsVisible.add(messageId);
+    _saveSpeechToTextMessageIdsVisible();
+    notifyListeners();
+  }
+
+  void removeSpeechToTextMessageIdVisible(int messageId) {
+    _speechToTextMessageIdsVisible.remove(messageId);
+    _saveSpeechToTextMessageIdsVisible();
+    notifyListeners();
+  }
+
+  void addSpeechToTextMessageIdHasShown(int messageId) {
+    if (_speechToTextMessageIdsHasShown.contains(messageId)) {
+      return;
+    }
+    if (_speechToTextMessageIdsHasShown.length >= speechToTextShownCountCache) {
+      _speechToTextMessageIdsHasShown.removeAt(0);
+    }
+    _speechToTextMessageIdsHasShown.add(messageId);
+    _saveSpeechToTextMessageIdsHasShown();
+  }
+
+  Future<void> _initSpeechToTextUIInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey('speechToTextMessageIdsVisible')) {
+      _speechToTextMessageIdsVisible = prefs
+              .getStringList('speechToTextMessageIdsVisible')
+              ?.map(int.parse)
+              .toSet() ??
+          {};
+    } else {
+      prefs.setStringList('speechToTextMessageIdsVisible', []);
+      _speechToTextMessageIdsVisible = {};
+    }
+    notifyListeners();
+
+    if (prefs.containsKey('speechToTextMessageIdsHasShown')) {
+      _speechToTextMessageIdsHasShown = prefs
+              .getStringList('speechToTextMessageIdsHasShown')
+              ?.map(int.parse)
+              .toList() ??
+          [];
+    }
+  }
+
+  Future<void> _saveSpeechToTextMessageIdsVisible() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('speechToTextMessageIdsVisible',
+        _speechToTextMessageIdsVisible.map((e) => e.toString()).toList());
+  }
+
+  Future<void> _saveSpeechToTextMessageIdsHasShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setStringList('speechToTextMessageIdsHasShown',
+        _speechToTextMessageIdsHasShown.map((e) => e.toString()).toList());
+  }
+
   @override
   void dispose() {
     engineProvider.receiveMessageNotifier.removeListener(_onReceiveMessage);
@@ -730,6 +879,8 @@ class RCKChatProvider extends ChangeNotifier {
         .removeListener(_onFailedMessageSent);
     engineProvider.recallMessageNotifier.removeListener(_onRecallMessage);
     engineProvider.networkChangeNotifier.removeListener(_onNetworkChange);
+    engineProvider.speechToTextMessageNotifier
+        .removeListener(_onSpeechToTextCompleted);
     super.dispose();
   }
 }

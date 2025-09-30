@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
 import '../bubble/message_callbacks.dart';
@@ -14,12 +15,8 @@ class RCKChatPage extends StatefulWidget {
   final ChatAppBarBuilder? appBarBuilder;
 
   /// 自定义消息气泡构建器
-  final Map<
-      RCIMIWMessageType,
-      RCKMessageBubble Function(
-          {required RCIMIWMessage message,
-          bool? showTime,
-          RCKBubbleConfig? config})>? customChatItemBubbleBuilders;
+  final Map<RCIMIWMessageType, CustomChatItemBubbleBuilder>?
+      customChatItemBubbleBuilders;
 
   /// 自定义吸顶区域构建器
   final Widget Function(BuildContext context)? stickyHeaderBuilder;
@@ -35,6 +32,12 @@ class RCKChatPage extends StatefulWidget {
 
   /// 消息侧滑回调
   final MessageSwipeCallback? onMessageSwipe;
+
+  /// 消息追加气泡点击回调
+  final MessageTapCallback? onMessageAppendBubbleTap;
+
+  /// 消息追加气泡长按回调
+  final MessageLongPressCallback? onMessageAppendBubbleLongPress;
 
   /// 点击权限弹窗之前回调
   final TapBeforePermissionCallback? onTapBeforePermission;
@@ -52,6 +55,8 @@ class RCKChatPage extends StatefulWidget {
     this.onMessageDoubleTap,
     this.onMessageLongPress,
     this.onMessageSwipe,
+    this.onMessageAppendBubbleTap,
+    this.onMessageAppendBubbleLongPress,
     this.conversation,
     this.onTapBeforePermission,
   }) : config = config ?? RCKChatPageConfig();
@@ -144,6 +149,20 @@ class RCKChatPageState extends State<RCKChatPage> {
     return null;
   }
 
+  void _collapseInputIfNeeded(BuildContext ctx) {
+    final inputProvider = ctx.read<RCKMessageInputProvider>();
+    if (inputProvider.inputType == RCIMIWMessageInputType.voice) {
+      return;
+    }
+
+    final bool keyboardOrPanelVisible =
+        inputProvider.inputType != RCIMIWMessageInputType.initial ||
+            inputProvider.focusNode.hasFocus;
+    if (keyboardOrPanelVisible) {
+      inputProvider.setInputType(RCIMIWMessageInputType.initial);
+    }
+  }
+
   @override
   void dispose() {
     // 安全地停止音频播放和录音
@@ -178,14 +197,7 @@ class RCKChatPageState extends State<RCKChatPage> {
                   ?.call(context, widget.config.appBarConfig) ??
               RCKChatAppBarWidget(
                 config: widget.config.appBarConfig,
-                title: Text(
-                  conversationName,
-                  style: TextStyle(
-                    color: RCKThemeProvider().themeColor.textPrimary,
-                    fontSize: appbarFontSize,
-                    fontWeight: appbarFontWeight,
-                  ),
-                ),
+                title: conversationName,
                 onLeadingPressed: () {
                   Navigator.of(context).pop();
                 },
@@ -316,30 +328,41 @@ class RCKChatPageState extends State<RCKChatPage> {
                                           .backgroundColor
                                       : Colors.transparent,
                                   child: GestureDetector(
-                                    onTap: () {
-                                      final inputProvider = context
-                                          .read<RCKMessageInputProvider>();
-                                      if (inputProvider.inputType !=
-                                          RCIMIWMessageInputType.voice) {
-                                        inputProvider.setInputType(
-                                            RCIMIWMessageInputType.initial);
-                                      }
-                                    },
-                                    child: RCKMessageList(
-                                      key: context
-                                          .read<RCKChatProvider>()
-                                          .messageListKey,
-                                      customChatItemBubbleBuilders:
-                                          widget.customChatItemBubbleBuilders,
-                                      stickyHeaderBuilder:
-                                          widget.stickyHeaderBuilder,
-                                      bubbleConfig: widget.config.bubbleConfig,
-                                      onMessageTap: widget.onMessageTap,
-                                      onMessageDoubleTap:
-                                          widget.onMessageDoubleTap,
-                                      onMessageLongPress:
-                                          widget.onMessageLongPress,
-                                      onMessageSwipe: widget.onMessageSwipe,
+                                    behavior: HitTestBehavior.translucent,
+                                    onTap: () =>
+                                        _collapseInputIfNeeded(context),
+                                    child: NotificationListener<
+                                        ScrollNotification>(
+                                      onNotification: (notification) {
+                                        if (notification
+                                                is UserScrollNotification &&
+                                            notification.direction !=
+                                                ScrollDirection.idle) {
+                                          _collapseInputIfNeeded(context);
+                                        }
+                                        return false;
+                                      },
+                                      child: RCKMessageList(
+                                        key: context
+                                            .read<RCKChatProvider>()
+                                            .messageListKey,
+                                        customChatItemBubbleBuilders:
+                                            widget.customChatItemBubbleBuilders,
+                                        stickyHeaderBuilder:
+                                            widget.stickyHeaderBuilder,
+                                        bubbleConfig:
+                                            widget.config.bubbleConfig,
+                                        onMessageTap: widget.onMessageTap,
+                                        onMessageDoubleTap:
+                                            widget.onMessageDoubleTap,
+                                        onMessageLongPress:
+                                            widget.onMessageLongPress,
+                                        onMessageSwipe: widget.onMessageSwipe,
+                                        onMessageAppendBubbleTap:
+                                            widget.onMessageAppendBubbleTap,
+                                        onMessageAppendBubbleLongPress: widget
+                                            .onMessageAppendBubbleLongPress,
+                                      ),
                                     ),
                                   ))),
                           isSystemConversation

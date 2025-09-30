@@ -25,6 +25,7 @@ export 'package:rongcloud_im_kit/views/chat_extras/forward_select_page.dart';
 
 //ui_config
 export 'package:rongcloud_im_kit/ui_config/chat/bubble/bubble_config.dart';
+export 'package:rongcloud_im_kit/ui_config/chat/bubble/message_style_config.dart';
 export 'package:rongcloud_im_kit/ui_config/conversation/conversation_config.dart';
 export 'package:rongcloud_im_kit/ui_config/conversation/conversation_app_bar_config.dart';
 export 'package:rongcloud_im_kit/ui_config/chat/page/chat_page_config.dart';

@@ -21,7 +21,7 @@ class SearchProvider extends ChangeNotifier {
 
   SearchProvider({required this.engineProvider});
 
-  updateQuery(String query) async {
+  Future<void> updateQuery(String query) async {
     _query = query;
     List<SearchResult> searchResults = []; // 新的数据结构
     List<Future> searchFutures = [];

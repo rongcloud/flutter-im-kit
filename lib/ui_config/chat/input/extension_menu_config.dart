@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../rongcloud_im_kit.dart';
 
+/// Grid 默认项点击回调（SDK 在触发时注入 BuildContext）
+typedef RCKGridItemTapCallback = Future<void> Function(BuildContext context);
+
 /// 扩展菜单项配置
 class RCKExtensionMenuItemConfig {
   /// 菜单项标题
@@ -13,6 +16,9 @@ class RCKExtensionMenuItemConfig {
   /// 点击回调
   final VoidCallback? onTap;
 
+  /// 带 BuildContext 的点击回调（优先于 onTap）
+  final RCKGridItemTapCallback? onTapWithContext;
+
   /// 图标大小
   final double iconSize;
 
@@ -23,12 +29,32 @@ class RCKExtensionMenuItemConfig {
     required this.title,
     required this.icon,
     this.onTap,
+    this.onTapWithContext,
     this.iconSize = kInputExtentionIconSize,
     this.titleStyle,
   });
 }
 
 /// 扩展菜单配置
+///
+/// 如果开发者需要修改默认的扩展菜单，可以用getDefaultGridItems方法获取默认的菜单项列表，修改以后，传入items参数
+/// 例如：
+/// final items = getDefaultGridItems(
+///   onTapBeforePermission: (context) async {},
+/// );
+///
+/// items.removeLast();
+/// items.add(RCKExtensionMenuItemConfig(
+///   title: '自定义菜单项',
+///   icon: Icon(Icons.add),
+///   onTapWithContext: (context) async {},
+/// ));
+///
+/// RCKExtensionMenuConfig(
+///   items: items,
+///   ),
+/// )
+///
 class RCKExtensionMenuConfig {
   /// 菜单项列表
   final List<RCKExtensionMenuItemConfig> items;
@@ -61,7 +87,7 @@ class RCKExtensionMenuConfig {
   final double height;
 
   const RCKExtensionMenuConfig({
-    this.items = const [],
+    List<RCKExtensionMenuItemConfig>? items,
     this.itemsPerPage = 8,
     this.crossAxisCount = 4,
     this.backgroundColor,
@@ -75,5 +101,5 @@ class RCKExtensionMenuConfig {
     this.indicatorSelectedColor = const Color(0xFF999999),
     this.indicatorUnselectedColor = const Color(0xFFD8D8D8),
     this.height = kInputExtentionHeight,
-  });
+  }) : items = items ?? const [];
 }

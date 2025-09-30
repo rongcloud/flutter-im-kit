@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:rongcloud_im_kit/views/chat/input/message_input_widget.dart';
 import '../../../rongcloud_im_kit.dart';
 
 class VoiceRecordButton extends StatefulWidget {
   /// 语音按钮配置
   final RCKVoiceRecordConfig config;
 
+  final TapBeforePermissionCallback? onTapBeforePermission;
+
   const VoiceRecordButton({
     super.key,
     this.config = const RCKVoiceRecordConfig(),
+    this.onTapBeforePermission,
   });
 
   @override
@@ -48,6 +52,10 @@ class VoiceRecordButtonState extends State<VoiceRecordButton> {
           onPointerDown: (PointerDownEvent event) async {
             // 检查麦克风权限
             _onRequestPermission = true;
+            if (widget.onTapBeforePermission != null) {
+              await widget.onTapBeforePermission!(
+                  context, Permission.microphone);
+            }
             final status = await Permission.microphone.request();
             _onRequestPermission = false;
             if (_inPermissionPointerUp) {

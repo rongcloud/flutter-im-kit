@@ -37,16 +37,31 @@ class RCKImageMessageBubble extends RCKMessageBubble {
     if (message is RCIMIWImageMessage) {
       RCIMIWImageMessage imageMessage = message as RCIMIWImageMessage;
 
+      final double maxW = maxWidth * scale;
+      final double maxH = maxHeight * scale;
+      final String b64 = imageMessage.thumbnailBase64String ?? '';
+
+      final natural = ImageUtil.getBase64NaturalSize(b64);
+      final double ratio =
+          (natural != null && natural.width > 0 && natural.height > 0)
+              ? natural.width / natural.height
+              : 3 / 4;
+
+      double w = maxW;
+      double h = w / ratio;
+      if (h > maxH) {
+        h = maxH;
+        w = h * ratio;
+      }
+
       return ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: maxWidth * scale,
-            maxHeight: maxHeight * scale,
-          ),
+        child: SizedBox(
+          width: w,
+          height: h,
           child: ImageUtil.getImageWidget(
             "",
-            thumbnailBase64String: imageMessage.thumbnailBase64String,
+            thumbnailBase64String: b64,
             fit: fit,
           ),
         ),
@@ -61,23 +76,52 @@ class RCKImageMessageBubble extends RCKMessageBubble {
         filePath = filePath.substring(7);
       }
 
+      final double maxW = maxWidth * scale;
+      final double maxH = maxHeight * scale;
+
+      // 优先使用模型自带尺寸，否则尝试从本地文件解尺寸，最后兜底比例
+      double? modelW = (gifMessage.width ?? 0).toDouble();
+      double? modelH = (gifMessage.height ?? 0).toDouble();
+      double? ratio;
+
+      if ((modelW > 0) && (modelH > 0)) {
+        ratio = modelW / modelH;
+      } else if (filePath != null && filePath.isNotEmpty) {
+        final natural = ImageUtil.getFileNaturalSize(filePath);
+        if (natural != null && natural.width > 0 && natural.height > 0) {
+          ratio = natural.width / natural.height;
+        }
+      }
+
+      ratio ??= 1.0; // GIF 兜底为 1:1
+
+      double w = maxW;
+      double h = w / ratio;
+      if (h > maxH) {
+        h = maxH;
+        w = h * ratio;
+      }
+
+      Widget child;
+      if (filePath != null && filePath.isNotEmpty) {
+        child = ImageUtil.getImageWidget(
+          filePath,
+          fit: fit,
+          notInAssets: true,
+        );
+      } else {
+        child = ImageUtil.getImageWidget(
+          gifMessage.remote ?? "",
+          fit: fit,
+        );
+      }
+
       return ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: maxWidth * scale,
-            maxHeight: maxHeight * scale,
-          ),
-          child: filePath != null && filePath.isNotEmpty
-              ? ImageUtil.getImageWidget(
-                  filePath,
-                  fit: fit,
-                  notInAssets: true,
-                )
-              : ImageUtil.getImageWidget(
-                  gifMessage.remote ?? "",
-                  fit: fit,
-                ),
+        child: SizedBox(
+          width: w,
+          height: h,
+          child: child,
         ),
       );
     }
@@ -91,15 +135,19 @@ class RCKImageMessageBubble extends RCKMessageBubble {
 
     RCIMIWMediaMessage imageMessage = message as RCIMIWMediaMessage;
 
-    var messages = context.read<RCKChatProvider>().messages;
+    final chatProvider = context.read<RCKChatProvider>();
+
+    var messages = chatProvider.messages;
     var imageCopy = messages.toList();
     imageCopy.removeWhere((element) =>
         element is! RCIMIWImageMessage && element is! RCIMIWGIFMessage);
     List<RCIMIWMediaMessage> images = imageCopy.cast<RCIMIWMediaMessage>();
     int currentIndex = imageCopy.indexOf(imageMessage);
 
-    final chatProvider = context.read<RCKChatProvider>();
     chatProvider.saveScrollOffset();
+
+    final inputProvider = context.read<RCKMessageInputProvider>();
+    inputProvider.setInputType(RCIMIWMessageInputType.initial);
 
     Navigator.pushNamed(context, '/photo_preview', arguments: {
       'currentIndex': currentIndex,

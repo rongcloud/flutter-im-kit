@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
-import 'package:scroll_to_index/scroll_to_index.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../../../utils/time_util.dart';
 import '../bubble/message_callbacks.dart';
 
 class RCKMessageList extends StatefulWidget {
   // 自定义生成器参数
-  final Map<
-      RCIMIWMessageType,
-      RCKMessageBubble Function(
-          {required RCIMIWMessage message,
-          bool? showTime,
-          RCKBubbleConfig? config})>? customChatItemBubbleBuilders;
+  final Map<RCIMIWMessageType, CustomChatItemBubbleBuilder>?
+      customChatItemBubbleBuilders;
 
   /// 吸顶区域构建器，默认为null（不显示）
   final Widget Function(BuildContext context)? stickyHeaderBuilder;
@@ -33,6 +29,12 @@ class RCKMessageList extends StatefulWidget {
   /// 消息侧滑回调
   final MessageSwipeCallback? onMessageSwipe;
 
+  /// 消息追加气泡点击回调
+  final MessageTapCallback? onMessageAppendBubbleTap;
+
+  /// 消息追加气泡长按回调
+  final MessageLongPressCallback? onMessageAppendBubbleLongPress;
+
   const RCKMessageList({
     super.key,
     this.customChatItemBubbleBuilders,
@@ -42,6 +44,8 @@ class RCKMessageList extends StatefulWidget {
     this.onMessageDoubleTap,
     this.onMessageLongPress,
     this.onMessageSwipe,
+    this.onMessageAppendBubbleTap,
+    this.onMessageAppendBubbleLongPress,
   });
 
   @override
@@ -49,15 +53,22 @@ class RCKMessageList extends StatefulWidget {
 }
 
 class RCKMessageListState extends State<RCKMessageList> {
-  late AutoScrollController _autoScrollController;
+  // scrollable_positioned_list 控制器
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
 
   // 添加一个状态变量，控制是否可以点击
   bool _canInteract = false;
 
+  // 合并滚动请求：同一帧仅执行最后一次
+  bool _scrollToBottomCoalesced = false;
+  bool _pendingScrollToBottom = false;
+  static const int _adjustRetryLimit = 5;
+
   @override
   void initState() {
     super.initState();
-    _autoScrollController = AutoScrollController();
 
     // 设置延迟，300毫秒后允许点击
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -70,58 +81,146 @@ class RCKMessageListState extends State<RCKMessageList> {
   }
 
   // 滚动到最新消息
-  Future<void> scrollToLatestMessage({bool? noAnimation}) async {
-    final messages = context.read<RCKChatProvider>().messages;
-    if (_autoScrollController.hasClients &&
-        !_autoScrollController.isAutoScrolling) {
-      if (noAnimation ?? false) {
-        // 判断内容是否超过一屏幕
-        bool isContentOverflowing =
-            _autoScrollController.position.maxScrollExtent > 0;
-        if (isContentOverflowing) {
-          _autoScrollController.scrollToIndex(
-            messages.length,
-            preferPosition: AutoScrollPosition.end,
-            duration: const Duration(milliseconds: 1),
-          );
+  Future<void> scrollToLatestMessage() async {
+    // 记录本帧需要滚动到底部，并以最后一次请求的 noAnimation 为准
+    _pendingScrollToBottom = true;
+
+    // 若已安排本帧执行，直接返回（帧末统一处理最新状态）
+    if (_scrollToBottomCoalesced) return;
+    _scrollToBottomCoalesced = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _scrollToBottomCoalesced = false;
+
+      // 若期间被取消或无需滚动，直接返回
+      if (!_pendingScrollToBottom) return;
+      _pendingScrollToBottom = false; // 消耗本帧的滚动请求
+
+      final messages = context.read<RCKChatProvider>().messages;
+      if (!_itemScrollController.isAttached || messages.isEmpty) return;
+
+      final int lastIndex = messages.length - 1;
+      _itemScrollController.jumpTo(index: lastIndex, alignment: 0.0);
+      _scheduleAdjustLastItem(lastIndex, _adjustRetryLimit);
+    });
+  }
+
+  void _scheduleAdjustLastItem(int lastIndex, int retriesLeft) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_itemScrollController.isAttached) return;
+
+      final positions = _itemPositionsListener.itemPositions.value;
+      if (positions.isEmpty) {
+        if (retriesLeft > 0) {
+          _scheduleAdjustLastItem(lastIndex, retriesLeft - 1);
         }
-      } else {
-        await _autoScrollController.scrollToIndex(
-          messages.length,
-          preferPosition: AutoScrollPosition.end,
-          duration: const Duration(milliseconds: 300),
-        );
+        return;
       }
-    }
+
+      ItemPosition? targetPosition;
+      for (final pos in positions) {
+        if (pos.index == lastIndex) {
+          targetPosition = pos;
+          break;
+        }
+      }
+
+      if (targetPosition == null) {
+        if (retriesLeft > 0) {
+          _scheduleAdjustLastItem(lastIndex, retriesLeft - 1);
+        }
+        return;
+      }
+
+      const double kAlignmentTolerance = 0.01;
+      if ((targetPosition.itemTrailingEdge - 1.0).abs() <=
+          kAlignmentTolerance) {
+        return;
+      }
+
+      _applyLastItemAlignment(lastIndex, targetPosition);
+
+      if (retriesLeft > 0) {
+        _scheduleAdjustLastItem(lastIndex, retriesLeft - 1);
+      }
+    });
   }
 
+  void _applyLastItemAlignment(int lastIndex, ItemPosition targetPosition) {
+    final double itemHeightFraction =
+        (targetPosition.itemTrailingEdge - targetPosition.itemLeadingEdge);
+    final double desiredAlignment = (1.0 - itemHeightFraction).clamp(0.0, 1.0);
+
+    _itemScrollController.jumpTo(
+      index: lastIndex,
+      alignment: desiredAlignment,
+    );
+  }
+
+  // 用 index+alignment 编码/解码的方式，保持 Provider 接口不改
   double getScrollOffset() {
-    return _autoScrollController.offset;
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return 0.0;
+    // 选择可见区域内 itemLeadingEdge >= 0 的最靠上的一项
+    final visible = positions.where((p) => p.itemLeadingEdge >= 0).toList()
+      ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+    final first = visible.isNotEmpty
+        ? visible.first
+        : (positions.toList()..sort((a, b) => a.index.compareTo(b.index)))
+            .first;
+    final double alignment = first.itemLeadingEdge.clamp(0.0, 1.0);
+    return first.index + alignment; // 编码
   }
 
-  listJumpToScrollOffset(double offset) {
-    if (_autoScrollController.hasClients) {
-      _autoScrollController.jumpTo(offset);
-    }
+  void listJumpToScrollOffset(double offset) {
+    if (!_itemScrollController.isAttached) return;
+    final int index = offset.floor();
+    double alignment = offset - index;
+    if (alignment < 0.0) alignment = 0.0;
+    if (alignment > 1.0) alignment = 1.0;
+    _itemScrollController.jumpTo(index: index, alignment: alignment);
   }
 
   Future<void> _handleRefresh() async {
     final provider = context.read<RCKChatProvider>();
-    final oldCount = provider.messages.length;
+
+    // 1) 记录当前首个可见项 index + alignment（0 顶部 ~ 1 底部）
+    int firstVisibleIndex = 0;
+    double firstAlignment = 0.0;
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isNotEmpty) {
+      final visible = positions.where((p) => p.itemLeadingEdge >= 0).toList()
+        ..sort((a, b) => a.itemLeadingEdge.compareTo(b.itemLeadingEdge));
+      final first = visible.isNotEmpty
+          ? visible.first
+          : (positions.toList()..sort((a, b) => a.index.compareTo(b.index)))
+              .first;
+      firstVisibleIndex = first.index;
+      firstAlignment = first.itemLeadingEdge.clamp(0.0, 1.0);
+    }
+
+    final int oldCount = provider.messages.length;
+
+    // 2) 头部加载
     await provider.loadOlderMessages();
-    final newCount = provider.messages.length - oldCount;
-    if (newCount > 0) {
-      // 滚动到新加载的历史消息的最后一条（即newCount-1位置）
-      await _autoScrollController.scrollToIndex(newCount - 1,
-          preferPosition: AutoScrollPosition.begin,
-          duration: const Duration(milliseconds: 100));
+
+    // 3) 恢复到原首个可见项（新 index = oldIndex + insertedCount），保持 alignment 不变
+    final int inserted = provider.messages.length - oldCount;
+    if (inserted > 0 && _itemScrollController.isAttached) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_itemScrollController.isAttached) return;
+        _itemScrollController.jumpTo(
+          index: firstVisibleIndex + inserted,
+          alignment: firstAlignment,
+        );
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final chatProvider = context.watch<RCKChatProvider>();
-    final messages = chatProvider.messages;
+    final messages =
+        context.select<RCKChatProvider, List<RCIMIWMessage>>((p) => p.messages);
 
     return Stack(
       children: [
@@ -130,118 +229,99 @@ class RCKMessageListState extends State<RCKMessageList> {
           absorbing: !_canInteract,
           child: RefreshIndicator(
             onRefresh: _handleRefresh,
-            child: CustomScrollView(
-              controller: _autoScrollController,
-              slivers: [
-                // 消息列表
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final message = messages[index];
-                      final bool showTime = index == 0 ||
-                          TimeUtil.shouldShowTime(message, messages[index - 1]);
-                      return VisibilityDetector(
-                        key: Key('message_$index'),
-                        onVisibilityChanged: (VisibilityInfo info) {
-                          if (info.visibleFraction >= 0.5) {
-                            // 如果消息属于未读@消息，则移除
-                            final foundIndex = chatProvider
-                                .unreadMentionedMessages
-                                ?.indexWhere((msg) =>
-                                    msg.messageId == message.messageId);
-                            if (foundIndex != -1 &&
-                                foundIndex != null &&
-                                chatProvider.unreadMentionedMessages != null) {
-                              chatProvider.removeUnreadMentiondMessage(
-                                  chatProvider
-                                      .unreadMentionedMessages![foundIndex]);
-                            }
-                          }
-                        },
-                        child: AutoScrollTag(
-                          key: ValueKey(index),
-                          controller: _autoScrollController,
-                          index: index,
-                          child: Padding(
-                            // 消息列表顶部和底部留白
-                            padding: EdgeInsets.only(
-                                top: index == 0 ? 10 : 0,
-                                bottom: index == messages.length - 1 ? 10 : 0),
-                            child: RCKMessageBubble.create(
-                              message: message,
-                              showTime: showTime,
-                              config: widget.bubbleConfig,
-                              customChatItemBubbleBuilders:
-                                  widget.customChatItemBubbleBuilders,
-                              onTap: widget.onMessageTap,
-                              onDoubleTap: widget.onMessageDoubleTap,
-                              onLongPress: widget.onMessageLongPress,
-                              onSwipe: widget.onMessageSwipe,
-                            ),
-                          ),
-                        ),
-                      );
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 10),
+              child: ScrollablePositionedList.builder(
+                itemCount: messages.length,
+                itemScrollController: _itemScrollController,
+                itemPositionsListener: _itemPositionsListener,
+                itemBuilder: (context, index) {
+                  final message = messages[index];
+                  final bool showTime = index == 0 ||
+                      TimeUtil.shouldShowTime(message, messages[index - 1]);
+                  return VisibilityDetector(
+                    key: Key('message_${message.messageId ?? index}'),
+                    onVisibilityChanged: (VisibilityInfo info) {
+                      if (info.visibleFraction >= 0.5) {
+                        // 如果消息属于未读@消息，则移除（使用 read 避免触发重建依赖）
+                        final provider = context.read<RCKChatProvider>();
+                        final list = provider.unreadMentionedMessages;
+                        final idx = list?.indexWhere(
+                            (msg) => msg.messageId == message.messageId);
+                        if (idx != null && idx != -1 && list != null) {
+                          provider.removeUnreadMentiondMessage(list[idx]);
+                        }
+                      }
                     },
-                    childCount: messages.length,
-                  ),
-                ),
-
-                // 添加吸顶区域（如果提供了构建器）
-                if (widget.stickyHeaderBuilder != null)
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: StickyHeaderDelegate(
-                      child: widget.stickyHeaderBuilder!(context),
+                    child: RCKMessageBubble.create(
+                      context: context,
+                      message: message,
+                      showTime: showTime,
+                      config: widget.bubbleConfig,
+                      customChatItemBubbleBuilders:
+                          widget.customChatItemBubbleBuilders,
+                      onTap: widget.onMessageTap,
+                      onDoubleTap: widget.onMessageDoubleTap,
+                      onLongPress: widget.onMessageLongPress,
+                      onSwipe: widget.onMessageSwipe,
+                      onAppendBubbleTap: widget.onMessageAppendBubbleTap,
+                      onAppendBubbleLongPress:
+                          widget.onMessageAppendBubbleLongPress,
                     ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        // 右上角悬浮按钮，根据 unreadMentionedMessages 数量显示
-        if (chatProvider.unreadMentionedMessages?.isNotEmpty ?? false)
-          Positioned(
-            top: 20,
-            right: 20,
-            child: AbsorbPointer(
-              // 快捷跳转按钮也需要控制点击状态
-              absorbing: !_canInteract,
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.redAccent.withValues(alpha: .8),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () {
-                  final targetMessage =
-                      chatProvider.unreadMentionedMessages!.last;
-                  int? messageId = targetMessage.messageId;
-                  final index = chatProvider.messages
-                      .indexWhere((msg) => msg.messageId == messageId);
-                  if (index != -1) {
-                    _autoScrollController.scrollToIndex(
-                      index,
-                      preferPosition: AutoScrollPosition.begin,
-                      duration: const Duration(milliseconds: 100),
-                    );
-                  }
+                  );
                 },
-                child: Text(
-                    "有人@你(${chatProvider.unreadMentionedMessages?.length.toString()})"),
               ),
             ),
           ),
+        ),
+        // 右上角悬浮按钮：用 Selector 降低重建范围
+        Selector<RCKChatProvider, int>(
+          selector: (_, p) => p.unreadMentionedMessages?.length ?? 0,
+          builder: (context, unreadCount, _) {
+            if (unreadCount <= 0) return const SizedBox.shrink();
+            return Positioned(
+              top: 20,
+              right: 20,
+              child: AbsorbPointer(
+                // 快捷跳转按钮也需要控制点击状态
+                absorbing: !_canInteract,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withValues(alpha: .8),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    final provider = context.read<RCKChatProvider>();
+                    final targetMessage =
+                        provider.unreadMentionedMessages!.last;
+                    int? messageId = targetMessage.messageId;
+                    final index = provider.messages
+                        .indexWhere((msg) => msg.messageId == messageId);
+                    if (index != -1 && _itemScrollController.isAttached) {
+                      _itemScrollController.scrollTo(
+                        index: index,
+                        alignment: 0.0,
+                        duration: const Duration(milliseconds: 100),
+                      );
+                    }
+                  },
+                  child: Text("有人@你($unreadCount)"),
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
 
   @override
   void dispose() {
-    _autoScrollController.dispose();
     super.dispose();
   }
 }
 
-/// 吸顶区域代理类
+/// 吸顶区域代理类（已不使用 SliverPinned，保留以兼容老接口）
 class StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double height;

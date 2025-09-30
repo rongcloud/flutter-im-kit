@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
 
-typedef AvatarBuilder = Widget Function(
-    BuildContext context, RCIMIWConversation conversation, RCKAvatarConfig config);
+typedef AvatarBuilder = Widget Function(BuildContext context,
+    RCIMIWConversation conversation, RCKAvatarConfig config);
 
 class AvatarWidget extends StatelessWidget {
   final RCIMIWConversation conversation;

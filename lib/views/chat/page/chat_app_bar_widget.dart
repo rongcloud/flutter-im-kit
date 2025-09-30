@@ -12,7 +12,7 @@ class RCKChatAppBarWidget extends StatelessWidget
   final RCKChatAppBarConfig config;
 
   /// 会话标题（如果不使用config中的标题）
-  final Widget? title;
+  final String? title;
 
   /// 标题点击回调
   final VoidCallback? onTitleTap;
@@ -42,36 +42,42 @@ class RCKChatAppBarWidget extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     Widget titleWidget;
-    if (title != null) {
-      titleWidget = title!;
-    } else {
-      Widget? textWidget;
-      if (config.titleConfig.text != null) {
-        textWidget = Text(
-          config.titleConfig.text!,
-          style: config.titleConfig.textStyle,
-        );
-      }
 
-      titleWidget = GestureDetector(
-        onTap: onTitleTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: config.titleConfig.alignment,
-          children: [
-            if (config.titleConfig.prefixIcon != null)
-              config.titleConfig.prefixIcon!,
-            if (config.titleConfig.prefixIcon != null && textWidget != null)
-              SizedBox(width: config.titleConfig.spacing),
-            if (textWidget != null) textWidget,
-            if (textWidget != null && config.titleConfig.suffixIcon != null)
-              SizedBox(width: config.titleConfig.spacing),
-            if (config.titleConfig.suffixIcon != null)
-              config.titleConfig.suffixIcon!,
-          ],
+    Widget? textWidget;
+    if (config.titleConfig.text != null) {
+      textWidget = Text(
+        config.titleConfig.text!,
+        style: config.titleConfig.textStyle,
+      );
+    } else if (title != null) {
+      textWidget = Text(
+        title ?? '',
+        style: TextStyle(
+          color: RCKThemeProvider().themeColor.textPrimary,
+          fontSize: appbarFontSize,
+          fontWeight: appbarFontWeight,
         ),
       );
     }
+
+    titleWidget = GestureDetector(
+      onTap: onTitleTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: config.titleConfig.alignment,
+        children: [
+          if (config.titleConfig.prefixIcon != null)
+            config.titleConfig.prefixIcon!,
+          if (config.titleConfig.prefixIcon != null && textWidget != null)
+            SizedBox(width: config.titleConfig.spacing),
+          if (textWidget != null) textWidget,
+          if (textWidget != null && config.titleConfig.suffixIcon != null)
+            SizedBox(width: config.titleConfig.spacing),
+          if (config.titleConfig.suffixIcon != null)
+            config.titleConfig.suffixIcon!,
+        ],
+      ),
+    );
 
     // 构建操作按钮
     List<Widget> actions = [];

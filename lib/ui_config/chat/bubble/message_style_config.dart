@@ -314,3 +314,51 @@ class RCKReferenceStyleConfig {
     );
   }
 }
+
+/// 追加气泡（附加面板）样式配置：用于控制主气泡下方追加内容的外观
+class RCKAppendBubbleConfig {
+  /// 与主气泡之间的垂直间距
+  final double spacingToMain;
+
+  /// 内边距
+  final EdgeInsets padding;
+
+  /// 背景色（为 null 则不设置背景与边框，仅保留内边距）
+  final Color? backgroundColor;
+
+  /// 圆角
+  final double borderRadius;
+
+  /// 边框颜色
+  final Color? borderColor;
+
+  /// 边框宽度
+  final double? borderWidth;
+
+  const RCKAppendBubbleConfig({
+    this.spacingToMain = 0.0,
+    this.padding = EdgeInsets.zero,
+    this.backgroundColor,
+    this.borderRadius = 6.0,
+    this.borderColor,
+    this.borderWidth,
+  });
+
+  RCKAppendBubbleConfig copyWith({
+    double? spacingToMain,
+    EdgeInsets? padding,
+    Color? backgroundColor,
+    double? borderRadius,
+    Color? borderColor,
+    double? borderWidth,
+  }) {
+    return RCKAppendBubbleConfig(
+      spacingToMain: spacingToMain ?? this.spacingToMain,
+      padding: padding ?? this.padding,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
+      borderRadius: borderRadius ?? this.borderRadius,
+      borderColor: borderColor ?? this.borderColor,
+      borderWidth: borderWidth ?? this.borderWidth,
+    );
+  }
+}

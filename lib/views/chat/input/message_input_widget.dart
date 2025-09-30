@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -33,7 +35,7 @@ typedef BottomButtonsBuilder = Widget Function(
 );
 
 // 点击权限弹窗之前回调类型定义
-typedef TapBeforePermissionCallback = void Function(
+typedef TapBeforePermissionCallback = Future<void> Function(
     BuildContext context, Permission permission);
 
 class RCKMessageInput extends StatefulWidget {
@@ -83,7 +85,8 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
   final ScrollController _textScrollController = ScrollController();
   late RCKMessageInputProvider _inputProvider;
 
-  fetchRefInfo(BuildContext context, RCIMIWMessage? message) async {
+  Future<void> fetchRefInfo(
+      BuildContext context, RCIMIWMessage? message) async {
     if (context.read<RCKEngineProvider>().customInfoProvider != null) {
       refName = (await context.read<RCKEngineProvider>().customInfoProvider!(
               message: message))
@@ -97,7 +100,16 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
     super.initState();
     _inputProvider = context.read<RCKMessageInputProvider>();
     final chatProvider = context.read<RCKChatProvider>();
-    _inputProvider.controller.text = chatProvider.conversation.draft ?? '';
+    // 设置草稿并在有草稿时自动聚焦弹出键盘
+    final draftText = chatProvider.conversation.draft ?? '';
+    _inputProvider.controller.text = draftText;
+    if (draftText.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _inputProvider.setInputType(RCIMIWMessageInputType.text);
+        }
+      });
+    }
     _inputProvider.controller.addListener(_handleTextChange);
   }
 
@@ -145,6 +157,15 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
             children: [
               GestureDetector(
                 onTap: () {
+                  if (chatProvider.selectedMessages.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('转发选择的消息数量为0'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                    return;
+                  }
                   context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
                   context.read<RCKVoiceRecordProvider>().cancelRecord();
                   chatProvider.saveScrollOffset();
@@ -205,7 +226,9 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
         Widget leftButton;
 
         final buttonConfig = widget.config.leftButtonConfig;
+        final leftButtonVisible = buttonConfig.visible;
         final isActive = provider.inputType == RCIMIWMessageInputType.voice;
+        final isAndroid = Platform.isAndroid;
 
         if (widget.leftButtonBuilder != null) {
           leftButton = widget.leftButtonBuilder!(
@@ -234,19 +257,22 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
                       height: buttonConfig.size,
                       color: buttonConfig.color);
 
-          leftButton = GestureDetector(
-            onTap: () {
-              RCIMIWMessageInputType targetType =
-                  provider.inputType != RCIMIWMessageInputType.voice
-                      ? RCIMIWMessageInputType.voice
-                      : RCIMIWMessageInputType.text;
-              provider.setInputType(targetType);
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
-              child: icon,
-            ),
-          );
+          leftButton = leftButtonVisible
+              ? GestureDetector(
+                  onTap: () {
+                    RCIMIWMessageInputType targetType =
+                        provider.inputType != RCIMIWMessageInputType.voice
+                            ? RCIMIWMessageInputType.voice
+                            : RCIMIWMessageInputType.text;
+                    provider.setInputType(targetType);
+                  },
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
+                    child: icon,
+                  ),
+                )
+              : SizedBox.shrink();
         }
 
         Widget rightButtonsWidget;
@@ -284,42 +310,110 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
               }
             }
           } else {
-            rightButtons = [
-              GestureDetector(
-                onTap: () {
-                  RCIMIWMessageInputType targetType =
-                      provider.inputType != RCIMIWMessageInputType.emoji
-                          ? RCIMIWMessageInputType.emoji
-                          : RCIMIWMessageInputType.text;
-                  provider.setInputType(targetType);
-                },
-                child: Padding(
-                  padding: EdgeInsets.only(left: buttonConfig.spacing),
-                  child: ImageUtil.getImageWidget(
-                      RCKThemeProvider().themeIcon.emoji1 ??
-                          'inputbar_emoji.png',
-                      height: buttonConfig.size,
-                      color: buttonConfig.color),
+            if (isAndroid) {
+              rightButtons = [
+                GestureDetector(
+                  onTap: () {
+                    RCIMIWMessageInputType targetType =
+                        provider.inputType != RCIMIWMessageInputType.emoji
+                            ? RCIMIWMessageInputType.emoji
+                            : RCIMIWMessageInputType.text;
+                    provider.setInputType(targetType);
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(left: buttonConfig.spacing),
+                    child: ImageUtil.getImageWidget(
+                        RCKThemeProvider().themeIcon.emoji1 ??
+                            'inputbar_emoji.png',
+                        height: buttonConfig.size,
+                        color: buttonConfig.color),
+                  ),
                 ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  RCIMIWMessageInputType targetType =
-                      provider.inputType != RCIMIWMessageInputType.more
-                          ? RCIMIWMessageInputType.more
-                          : RCIMIWMessageInputType.text;
-                  provider.setInputType(targetType);
-                },
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
-                  child: ImageUtil.getImageWidget(
-                      RCKThemeProvider().themeIcon.more ?? 'inputbar_add.png',
-                      height: buttonConfig.size,
-                      color: buttonConfig.color),
+                GestureDetector(
+                  onTap: () {
+                    RCIMIWMessageInputType targetType =
+                        provider.inputType != RCIMIWMessageInputType.more
+                            ? RCIMIWMessageInputType.more
+                            : RCIMIWMessageInputType.text;
+                    provider.setInputType(targetType);
+                  },
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
+                    child: ImageUtil.getImageWidget(
+                        RCKThemeProvider().themeIcon.more ?? 'inputbar_add.png',
+                        height: buttonConfig.size,
+                        color: buttonConfig.color),
+                  ),
                 ),
-              ),
-            ];
+                GestureDetector(
+                  onTap: () {
+                    if (provider.controller.text.trim().isNotEmpty) {
+                      provider.inputSendMessage(context);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('请输入消息内容'),
+                          duration: const Duration(milliseconds: 500),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      provider.setInputType(RCIMIWMessageInputType.text);
+                    }
+                  },
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
+                    child: SizedBox(
+                      width: buttonConfig.size,
+                      height: buttonConfig.size,
+                      child: Icon(
+                        Icons.send,
+                        size: buttonConfig.size,
+                        color: buttonConfig.activeColor ?? buttonConfig.color,
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+            } else {
+              rightButtons = [
+                GestureDetector(
+                  onTap: () {
+                    RCIMIWMessageInputType targetType =
+                        provider.inputType != RCIMIWMessageInputType.emoji
+                            ? RCIMIWMessageInputType.emoji
+                            : RCIMIWMessageInputType.text;
+                    provider.setInputType(targetType);
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(left: buttonConfig.spacing),
+                    child: ImageUtil.getImageWidget(
+                        RCKThemeProvider().themeIcon.emoji1 ??
+                            'inputbar_emoji.png',
+                        height: buttonConfig.size,
+                        color: buttonConfig.color),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    RCIMIWMessageInputType targetType =
+                        provider.inputType != RCIMIWMessageInputType.more
+                            ? RCIMIWMessageInputType.more
+                            : RCIMIWMessageInputType.text;
+                    provider.setInputType(targetType);
+                  },
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: buttonConfig.spacing),
+                    child: ImageUtil.getImageWidget(
+                        RCKThemeProvider().themeIcon.more ?? 'inputbar_add.png',
+                        height: buttonConfig.size,
+                        color: buttonConfig.color),
+                  ),
+                ),
+              ];
+            }
           }
 
           rightButtonsWidget = Row(
@@ -404,7 +498,10 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
                       padding: const EdgeInsets.symmetric(
                           vertical: kInputFieldContentPaddingV),
                       child: provider.inputType == RCIMIWMessageInputType.voice
-                          ? const VoiceRecordButton()
+                          ? VoiceRecordButton(
+                              onTapBeforePermission:
+                                  widget.onTapBeforePermission,
+                            )
                           : TextField(
                               focusNode: provider.focusNode,
                               controller: provider.controller,
@@ -441,7 +538,7 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
                                     horizontal: kInputFieldContentPaddingH),
                                 filled: true,
                                 fillColor:
-                                    RCKThemeProvider().themeColor.bgRegular,
+                                    widget.config.inputFieldConfig.fillColor,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
                                       kInputFieldBorderRadius),
@@ -463,8 +560,8 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
                                       behavior: SnackBarBehavior.floating,
                                     ),
                                   );
-                                  FocusScope.of(context)
-                                      .requestFocus(provider.focusNode);
+                                  provider.setInputType(
+                                      RCIMIWMessageInputType.text);
                                 }
                               },
                             ),
@@ -490,8 +587,7 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
                             ? GridButtonWidget.fromConfig(
                                 widget.config.extensionMenuConfig!)
                             : GridButtonWidget(
-                                items: GridButtonWidget.getDefaultGridItems(
-                                    context,
+                                items: getDefaultGridItems(
                                     onTapBeforePermission:
                                         widget.onTapBeforePermission),
                               )

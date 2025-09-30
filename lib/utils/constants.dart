@@ -16,6 +16,7 @@ const Color fileBubbleColor = Colors.white; // 其他人对话气泡颜色
 const double appbarFontSize = 20;
 const FontWeight appbarFontWeight = FontWeight.w500;
 const double appbarHeight = 50;
+const int speechToTextShownCountCache = 1000;
 
 //消息列表
 const Color convoItemTextColor = Colors.white;

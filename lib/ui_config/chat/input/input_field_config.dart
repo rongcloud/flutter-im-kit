@@ -36,9 +36,9 @@ class RCKInputFieldConfig {
   /// 文本输入动作
   final TextInputAction textInputAction;
 
-  const RCKInputFieldConfig({
+  RCKInputFieldConfig({
     this.maxHeight = kInputFieldMaxHeight,
-    this.fillColor = const Color(0xFFFFFFFF),
+    Color? fillColor,
     this.border,
     this.focusedBorder,
     this.contentPadding = const EdgeInsets.all(8.0),
@@ -48,7 +48,9 @@ class RCKInputFieldConfig {
     this.cursorColor,
     this.borderRadius = 10.0,
     this.textInputAction = TextInputAction.send,
-  });
+  }) : fillColor = fillColor ??
+            RCKThemeProvider().themeColor.bgRegular ??
+            const Color(0xFFFFFFFF);
 
   /// 获取输入框装饰
   InputDecoration getDecoration() {

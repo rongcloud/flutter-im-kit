@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
 import '../../../utils/time_util.dart';
 
-typedef TimeBuilder = Widget Function(
-    BuildContext context, RCIMIWConversation conversation, RCKTimeConfig config);
+typedef TimeBuilder = Widget Function(BuildContext context,
+    RCIMIWConversation conversation, RCKTimeConfig config);
 
 class TimeWidget extends StatelessWidget {
   final RCIMIWConversation conversation;

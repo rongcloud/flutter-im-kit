@@ -21,7 +21,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  rongcloud_im_kit: ^1.0.0+3
+  rongcloud_im_kit: ^1.0.1
 ```
 
 

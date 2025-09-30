@@ -100,6 +100,10 @@ class RCKMessageInputProvider with ChangeNotifier {
         chatProvider.conversation.conversationType ==
             RCIMIWConversationType.group) {
       int cursorIndex = controller.selection.baseOffset;
+      // 验证 cursorIndex 的有效性
+      if (cursorIndex == -1) {
+        cursorIndex = newText.length;
+      }
       if (cursorIndex > 0 && newText[cursorIndex - 1] == '@') {
         context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
         context.read<RCKVoiceRecordProvider>().cancelRecord();
@@ -111,6 +115,10 @@ class RCKMessageInputProvider with ChangeNotifier {
           final currentText = controller.text;
           final selection = controller.selection;
           int cursorIndex = selection.baseOffset;
+          // 验证 cursorIndex 的有效性
+          if (cursorIndex == -1) {
+            cursorIndex = currentText.length;
+          }
           // 判断光标前一个字符是否为 '@'
           if (cursorIndex > 0 && currentText[cursorIndex - 1] == '@') {
             final newText = currentText.replaceRange(
@@ -148,7 +156,7 @@ class RCKMessageInputProvider with ChangeNotifier {
     lastChangedText = '';
     // 重新设置焦点，保持键盘打开
     if (!keepFocus) {
-      FocusScope.of(context).requestFocus(focusNode);
+      setInputType(RCIMIWMessageInputType.text);
     }
   }
 
@@ -176,7 +184,7 @@ class RCKMessageInputProvider with ChangeNotifier {
             _focusNode.context!,
             listen: false,
           );
-          chatProvider.messageListScrollToBottom(noAnimation: true);
+          chatProvider.messageListScrollToBottom();
         }
       });
     }
@@ -189,27 +197,30 @@ class RCKMessageInputProvider with ChangeNotifier {
 
   void setInputType(RCIMIWMessageInputType type) {
     _inputType = type;
-    if (type == RCIMIWMessageInputType.voice ||
-        type == RCIMIWMessageInputType.emoji ||
-        type == RCIMIWMessageInputType.more ||
-        type == RCIMIWMessageInputType.initial) {
-      _focusNode.unfocus();
-      // 延迟200ms后，如果输入框没有获得焦点，则滚动到最新消息
-      if (type != RCIMIWMessageInputType.initial) {
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (!_focusNode.hasFocus &&
-              _focusNode.context != null &&
-              _focusNode.context!.mounted) {
-            final chatProvider = Provider.of<RCKChatProvider>(
-              _focusNode.context!,
-              listen: false,
-            );
-            chatProvider.messageListScrollToBottom(noAnimation: true);
-          }
-        });
-      }
-    } else {
-      _focusNode.requestFocus();
+    switch (type) {
+      case RCIMIWMessageInputType.voice:
+      case RCIMIWMessageInputType.emoji:
+      case RCIMIWMessageInputType.more:
+      case RCIMIWMessageInputType.initial:
+        _focusNode.unfocus();
+        // 延迟200ms后，如果输入框没有获得焦点，则滚动到最新消息
+        if (type != RCIMIWMessageInputType.initial) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (!_focusNode.hasFocus &&
+                _focusNode.context != null &&
+                _focusNode.context!.mounted) {
+              final chatProvider = Provider.of<RCKChatProvider>(
+                _focusNode.context!,
+                listen: false,
+              );
+              chatProvider.messageListScrollToBottom();
+            }
+          });
+        }
+        break;
+      case RCIMIWMessageInputType.text:
+        _focusNode.requestFocus();
+        break;
     }
     notifyListeners();
 
@@ -223,14 +234,29 @@ class RCKMessageInputProvider with ChangeNotifier {
   void addText(String text, BuildContext context) {
     final currentText = _controller.text;
     final currentSelection = _controller.selection;
+
+    // 验证 TextSelection 的有效性，如果无效则使用默认值
+    int start = currentSelection.start;
+    int end = currentSelection.end;
+
+    // 如果 start 或 end 为 -1，说明选择无效，使用文本长度作为默认位置
+    if (start == -1 || end == -1) {
+      start = currentText.length;
+      end = currentText.length;
+    }
+
+    // 确保 start 和 end 在有效范围内
+    start = start.clamp(0, currentText.length);
+    end = end.clamp(0, currentText.length);
+
     // 在当前光标位置或者选区插入文本
     final newText = currentText.replaceRange(
-      currentSelection.start,
-      currentSelection.end,
+      start,
+      end,
       text,
     );
     // 计算新的光标位置
-    final newOffset = currentSelection.start + text.length;
+    final newOffset = start + text.length;
     // 使用 copyWith 更新 controller 的 value
     _controller.value = _controller.value.copyWith(
       text: newText,
@@ -246,7 +272,13 @@ class RCKMessageInputProvider with ChangeNotifier {
     final text = _controller.text;
     final selection = _controller.selection;
 
-    int offset = selection.baseOffset > 0 ? selection.baseOffset : text.length;
+    // 验证 TextSelection 的有效性
+    int offset = selection.baseOffset;
+    if (offset == -1) {
+      offset = text.length;
+    }
+
+    offset = offset > 0 ? offset : text.length;
     if (offset <= 0) return;
 
     bool isEmoji = _containsEmoji(text);

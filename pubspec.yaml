@@ -1,8 +1,9 @@
 name: rongcloud_im_kit
 description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-use chat UI components, conversation lists into Flutter applications."
-version: 1.0.0+3
+version: 1.0.1
 homepage: https://www.rongcloud.cn/
 repository: https://github.com/rongcloud/flutter-im-kit
+publish_to: none
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -12,47 +13,52 @@ dependencies:
   flutter:
     sdk: flutter
 
-  rongcloud_im_wrapper_plugin: 5.12.1+2
+  # RongCloud IM wrapper plugin（本地插件，桥接 IMLib 能力）
+  rongcloud_im_wrapper_plugin: 5.24.6
 
+  # 状态管理
   provider: ^6.1.2
+
+  # 图片加载与缓存
   cached_network_image: ^3.4.1
 
+  # UI 组件与交互增强（滑动菜单、列表定位、链接识别、可见性监听等）
   flutter_slidable: ^4.0.0
-  just_audio: ^0.10.3
-
-  record: ^6.0.0
-
-  path_provider: ^2.1.5
-
-  image_picker: ^1.1.2
-  photo_view: ^0.15.0
-  
-  video_player: ^2.9.5
-
-  file_picker: ^10.1.9
-
-  xml: ^6.5.0
-
-  share_plus: ^11.0.0
-
-  scroll_to_index: ^3.0.1
-
+  scrollable_positioned_list: ^0.3.8
   flutter_linkify: ^6.0.0
-
-  url_launcher: ^6.3.1
   visibility_detector: ^0.4.0+2
 
-  permission_handler: ^12.0.0+1
+  # 多媒体能力（音视频/图片 采集、播放、预览、保存、尺寸计算）
+  just_audio: ^0.10.3
+  record: ^6.0.0
+  video_player: ^2.9.5
+  photo_view: ^0.15.0
+  image_gallery_saver_plus: ^4.0.1
+  image_size_getter: ^2.4.1
 
+  # 媒体选择（相册/拍摄）
+  wechat_assets_picker: ^9.8.0
+  wechat_camera_picker: ^4.4.0
+  photo_manager: ^3.7.1
+
+  # 文件系统与选择器
+  path_provider: ^2.1.5
+  file_picker: ^10.1.9
+
+  # 平台能力与权限/信息
+  permission_handler: ^12.0.0+1
+  device_info_plus: ^12.1.0
+  package_info_plus: ^9.0.0
+  url_launcher: ^6.3.1
+
+  # 通知
   flutter_local_notifications: ^19.0.0
 
-  device_info_plus: ^11.3.3
-  
-  image_gallery_saver_plus: ^4.0.1
-
-  package_info_plus: ^8.3.0
-
+  # 网络与工具
   dio: ^5.7.0
+  shared_preferences: ^2.5.3
+  xml: ^6.5.0
+  share_plus: ^12.0.0
 
 dev_dependencies:
   # flutter_test:
@@ -188,6 +194,7 @@ flutter:
     - assets/RCLightIcon/filming.png
     - assets/RCLightIcon/play_video.png
     - assets/RCLightIcon/recall.png
+    - assets/RCLightIcon/STT.png
 
     - assets/RCDarkIcon/Down-arrow.png
     - assets/RCDarkIcon/Abnormal.png
@@ -246,7 +253,8 @@ flutter:
     - assets/RCDarkIcon/filming.png
     - assets/RCDarkIcon/play_video.png
     - assets/RCDarkIcon/recall.png
-    
+    - assets/RCDarkIcon/STT.png
+
     - assets/messageSendFail.png 
     - assets/messageSending.png
     - assets/sight_play.png
@@ -258,6 +266,7 @@ flutter:
     - assets/voice_send_icon.png
     - assets/multi_select.png
     - assets/multi_unselect.png
+    - assets/speech_loading.png
     
 
   #

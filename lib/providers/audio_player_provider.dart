@@ -69,6 +69,21 @@ class RCKAudioPlayerProvider extends ChangeNotifier
       filePath = filePath.substring(7);
     }
 
+    // 如果是iOS，复制成一个m4a后缀的文件，相同文件夹
+    if (filePath != null && Platform.isIOS) {
+      final originalFile = File(filePath);
+      if (await originalFile.exists()) {
+        final dir = originalFile.parent;
+        final newFileName =
+            '${originalFile.uri.pathSegments.last.split('.').first}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        final newFilePath = '${dir.path}/$newFileName';
+        if (!await File(newFilePath).exists()) {
+          await originalFile.copy(newFilePath);
+        }
+        filePath = newFilePath;
+      }
+    }
+
     if (filePath != null && !kIsWeb && File(filePath).existsSync()) {
       try {
         // 使用 file:// 协议

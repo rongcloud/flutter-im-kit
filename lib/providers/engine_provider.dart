@@ -34,6 +34,9 @@ class RCKEngineProvider with ChangeNotifier {
 
   final ValueNotifier<String?> conversationStatus = ValueNotifier(null);
 
+  final ValueNotifier<RCIMIWVoiceMessage?> speechToTextMessageNotifier =
+      ValueNotifier(null);
+
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _isNotificationInitialized = false;
@@ -47,6 +50,14 @@ class RCKEngineProvider with ChangeNotifier {
 
   /// 自定义信息提供者
   CustomInfoProvider? customInfoProvider;
+
+  // AppSettings里语音转文字开关
+  bool _enableSpeechToText = true;
+  bool get enableSpeechToText => _enableSpeechToText;
+  set enableSpeechToText(bool value) {
+    _enableSpeechToText = value;
+    notifyListeners();
+  }
 
   // 初始化本地通知
   Future<void> _initializeLocalNotifications() async {
@@ -115,6 +126,10 @@ class RCKEngineProvider with ChangeNotifier {
         currentUserId = userIdReturn;
       }
       onResult(code);
+
+      // 连接以后设置AppSettings
+      _setAppSettings();
+
       RCIMWrapperPlatform.instance.writeLog(
           'RCIMIWConnectCallback',
           'onConnected',
@@ -189,6 +204,28 @@ class RCKEngineProvider with ChangeNotifier {
             'onConversationReadStatusSyncMessageReceived $targetId $timestamp');
       }));
     };
+
+    engine?.onSpeechToTextCompleted = (info, messageUId, code) {
+      RCIMIWVoiceMessage voiceMessage = RCIMIWVoiceMessage.fromJson({});
+      voiceMessage.speechToTextInfo = info;
+      voiceMessage.messageUId = messageUId;
+      if (code != 0) {
+        voiceMessage.speechToTextInfo?.status = RCIMIWSpeechToTextStatus.failed;
+      }
+      speechToTextMessageNotifier.value = voiceMessage;
+
+      RCIMWrapperPlatform.instance.writeLog(
+          'engine?.onSpeechToTextCompleted',
+          'engineConnect',
+          code ?? 0,
+          'onSpeechToTextCompleted $messageUId $code');
+      notifyListeners();
+    };
+  }
+
+  Future<void> _setAppSettings() async {
+    final appSettings = await engine?.getAppSettings();
+    enableSpeechToText = appSettings?.speechToTextEnable ?? false;
   }
 
   Future<void> setupLocalNotification({bool enable = true}) async {
@@ -269,7 +306,6 @@ class RCKEngineProvider with ChangeNotifier {
         presentSound: true,
         presentBadge: true,
         sound: 'default',
-        badgeNumber: 1,
         interruptionLevel: InterruptionLevel.timeSensitive,
       );
 

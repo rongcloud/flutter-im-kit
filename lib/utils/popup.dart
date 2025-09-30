@@ -9,6 +9,9 @@ enum PopupType {
 
   /// 对话详情
   chat,
+
+  /// 附加气泡
+  bubbleAppend,
 }
 
 Future<String?> showPopupMenu(BuildContext context, PopupType type,
@@ -18,9 +21,37 @@ Future<String?> showPopupMenu(BuildContext context, PopupType type,
     bool? canRecall,
     bool? canQuote,
     bool? canCopy,
+    bool? canSpeechToText,
+    bool? canCancelSpeechToText,
     bool conversationIsSystem = false}) {
 // 默认菜单项列表
   final defaultItemsChat = [
+    if (((canSpeechToText ?? false) || (canCancelSpeechToText ?? false)) && !conversationIsSystem)
+      PopupMenuItem<String>(
+        value: 'speechToText',
+        height: 34,
+        padding: EdgeInsets.zero,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ImageUtil.getImageWidget(
+                  RCKThemeProvider().themeIcon.speechToText ?? '',
+                  width: kPopupIconSize,
+                  height: kPopupIconSize,
+                  color: RCKThemeProvider().themeColor.textPrimary),
+              Text(
+                (canCancelSpeechToText ?? false) ? '取消转文字' : '转文字',
+                style: TextStyle(
+                    fontSize: convoPopupFontSize,
+                    color: RCKThemeProvider().themeColor.textPrimary),
+              ),
+            ],
+          ),
+        ),
+      ),
     if (canCopy ?? true)
       PopupMenuItem<String>(
         value: 'copy',
@@ -167,6 +198,57 @@ Future<String?> showPopupMenu(BuildContext context, PopupType type,
           ),
         ),
       ),
+  ];
+
+  // 附加气泡菜单项列表
+  final defaultItemsBubbleAppend = [
+    if ((canCancelSpeechToText ?? false) && !conversationIsSystem)
+      PopupMenuItem<String>(
+        value: 'speechToText',
+        height: 34,
+        padding: EdgeInsets.zero,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ImageUtil.getImageWidget(
+                  RCKThemeProvider().themeIcon.speechToText ?? '',
+                  width: kPopupIconSize,
+                  height: kPopupIconSize,
+                  color: RCKThemeProvider().themeColor.textPrimary),
+              Text(
+                '取消转文字',
+                style: TextStyle(
+                    fontSize: convoPopupFontSize,
+                    color: RCKThemeProvider().themeColor.textPrimary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    PopupMenuItem<String>(
+      value: 'copy',
+      height: 34,
+      padding: EdgeInsets.zero,
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ImageUtil.getImageWidget(RCKThemeProvider().themeIcon.copy ?? '',
+                  width: kPopupIconSize, height: kPopupIconSize),
+              Text(
+                '复制',
+                style: TextStyle(
+                    fontSize: convoPopupFontSize,
+                    color: RCKThemeProvider().themeColor.textPrimary),
+              ),
+            ],
+          )),
+    ),
   ];
 
   // 默认菜单项列表
@@ -327,7 +409,11 @@ Future<String?> showPopupMenu(BuildContext context, PopupType type,
       ),
       // 真实菜单项
       ...(items ??
-          (type == PopupType.convo ? defaultItemsConvo : defaultItemsChat)),
+          (switch (type) {
+            PopupType.convo => defaultItemsConvo,
+            PopupType.chat => defaultItemsChat,
+            PopupType.bubbleAppend => defaultItemsBubbleAppend,
+          })),
       // 底部填充
       const PopupMenuItem<String>(
         enabled: false,
