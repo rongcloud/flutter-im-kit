@@ -1,8 +1,9 @@
 name: rongcloud_im_kit
 description: "A comprehensive Flutter IM Kit by RongCloud, providing ready-to-use chat UI components, conversation lists into Flutter applications."
-version: 1.0.1
+version: 1.0.2
 homepage: https://www.rongcloud.cn/
 repository: https://github.com/rongcloud/flutter-im-kit
+publish_to: none
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -36,9 +37,9 @@ dependencies:
   image_size_getter: ^2.4.1
 
   # 媒体选择（相册/拍摄）
-  wechat_assets_picker: ^9.8.0
+  wechat_assets_picker: ^10.0.0
   wechat_camera_picker: ^4.4.0
-  photo_manager: ^3.7.1
+  photo_manager: ^3.8.3
 
   # 文件系统与选择器
   path_provider: ^2.1.5
@@ -47,7 +48,6 @@ dependencies:
   # 平台能力与权限/信息
   permission_handler: ^12.0.0+1
   device_info_plus: ^12.1.0
-  package_info_plus: ^9.0.0
   url_launcher: ^6.3.1
 
   # 通知

@@ -114,8 +114,7 @@ class RCKChatProvider extends ChangeNotifier {
 
       if (selectedMessages.isNotEmpty) {
         selectedMessages.removeWhere((msg) =>
-            msg.messageId != null &&
-            msg.messageId == recallMessage.messageId);
+            msg.messageId != null && msg.messageId == recallMessage.messageId);
       }
       notifyListeners();
     }
@@ -387,7 +386,9 @@ class RCKChatProvider extends ChangeNotifier {
                   _onMessageSaved(message, isResend: isResend);
                 },
                 onMediaMessageSending: (message, progress) {},
-                onSendingMediaMessageCanceled: (message) {},
+                onSendingMediaMessageCanceled: (message) {
+                  _syncMessageStatus(message);
+                },
                 onMediaMessageSent: (code, message) {
                   _onMessageSent(code, message,
                       isResend: isResend, context: context);
@@ -403,6 +404,25 @@ class RCKChatProvider extends ChangeNotifier {
               _onMessageSent(code, message, isResend: isResend);
             },
           ));
+    }
+  }
+
+  void _syncMessageStatus(RCIMIWMediaMessage? message) {
+    if (message != null && conversation.targetId == message.targetId) {
+      for (int i = 0; i < _messages.length; i++) {
+        if (_messages[i].messageId == message.messageId) {
+          _messages[i] = message;
+          break;
+        }
+      }
+      notifyListeners();
+
+      engineProvider.addFailedMessage(message);
+      RCIMWrapperPlatform.instance.writeLog(
+          'RCKChatProvider _syncMessageStatus',
+          '',
+          0,
+          'syncMessageStatus failed: ${message.messageId}');
     }
   }
 

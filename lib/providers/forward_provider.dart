@@ -11,7 +11,7 @@ class RCKForwardProvider extends ChangeNotifier {
   RCKChatProvider? _chatProvider;
   List<RCKChatProfileInfo> chatProfileInfos = [];
 
-  CustomInfoProvider? customInfoProvider;
+  CustomInfoProvider? userInfoProvider;
   BuildContext? context;
 
   bool _isLoadingMore = false;
@@ -56,10 +56,10 @@ class RCKForwardProvider extends ChangeNotifier {
             if (t.length == _pageSize) {
               _loadMoreConversations(chatProvider);
             } else {
-              if (customInfoProvider != null &&
+              if (userInfoProvider != null &&
                   context != null &&
                   context!.mounted) {
-                getChatProfileInfos(context!, customInfoProvider!);
+                getChatProfileInfos(context!, userInfoProvider!);
               }
             }
           } else {
@@ -73,18 +73,18 @@ class RCKForwardProvider extends ChangeNotifier {
   }
 
   void setCustomInfoProvider(
-      BuildContext context, CustomInfoProvider customInfoProvider) {
+      BuildContext context, CustomInfoProvider userInfoProvider) {
     this.context = context;
-    this.customInfoProvider = customInfoProvider;
+    this.userInfoProvider = userInfoProvider;
     if (conversationsToForward.isNotEmpty) {
-      getChatProfileInfos(context, customInfoProvider);
+      getChatProfileInfos(context, userInfoProvider);
     }
   }
 
   Future<void> getChatProfileInfos(
-      BuildContext context, CustomInfoProvider customInfoProvider) async {
+      BuildContext context, CustomInfoProvider userInfoProvider) async {
     for (int i = 0; i < conversationsToForward.length; i++) {
-      RCKChatProfileInfo chatProfileInfo = await customInfoProvider(
+      RCKChatProfileInfo chatProfileInfo = await userInfoProvider(
           message: null, conversation: conversationsToForward[i]);
       chatProfileInfos.add(chatProfileInfo);
     }

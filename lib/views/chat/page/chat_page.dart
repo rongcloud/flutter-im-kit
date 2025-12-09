@@ -103,10 +103,10 @@ class RCKChatPageState extends State<RCKChatPage> {
   }
 
   Future<void> _fetchChatName() async {
-    if (context.read<RCKEngineProvider>().customInfoProvider != null) {
-      RCKChatProfileInfo chatProfileInfo =
-          await context.read<RCKEngineProvider>().customInfoProvider!(
-              message: null, conversation: widget.conversation);
+    if (context.read<RCKEngineProvider>().userInfoProvider != null) {
+      RCKChatProfileInfo chatProfileInfo = await context
+          .read<RCKEngineProvider>()
+          .userInfoProvider!(message: null, conversation: widget.conversation);
       conversationName = chatProfileInfo.name.isNotEmpty
           ? chatProfileInfo.name
           : widget.conversation?.targetId ?? '';

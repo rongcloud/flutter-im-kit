@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rongcloud_im_kit/views/chat_extras/sight_player_page.dart';
 import '../../../rongcloud_im_kit.dart';
 import 'package:provider/provider.dart';
 
@@ -116,12 +117,17 @@ class RCKSightMessageBubble extends RCKMessageBubble {
             if (code == 0) {
               sightMessage.local = message?.local ?? '';
               context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
+              final inputProvider = context.read<RCKMessageInputProvider>();
+              inputProvider.setInputType(RCIMIWMessageInputType.initial);
               final chatProvider = context.read<RCKChatProvider>();
               chatProvider.saveScrollOffset();
-              Navigator.pushNamed(context, '/video_player_page', arguments: {
-                'currentIndex': 0,
-                'videos': [sightMessage],
-              }).then((value) {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => RCKSightPlayerPage(
+                            currentIndex: 0,
+                            videos: [sightMessage],
+                          ))).then((value) {
                 chatProvider.jumpToScrollOffset();
               });
             }
@@ -135,12 +141,17 @@ class RCKSightMessageBubble extends RCKMessageBubble {
     } else {
       context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
       context.read<RCKVoiceRecordProvider>().cancelRecord();
+      final inputProvider = context.read<RCKMessageInputProvider>();
+      inputProvider.setInputType(RCIMIWMessageInputType.initial);
       final chatProvider = context.read<RCKChatProvider>();
       chatProvider.saveScrollOffset();
-      Navigator.pushNamed(context, '/video_player_page', arguments: {
-        'currentIndex': 0,
-        'videos': [sightMessage],
-      }).then((value) {
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => RCKSightPlayerPage(
+                    currentIndex: 0,
+                    videos: [sightMessage],
+                  ))).then((value) {
         chatProvider.jumpToScrollOffset();
       });
     }

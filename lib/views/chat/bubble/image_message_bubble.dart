@@ -149,10 +149,13 @@ class RCKImageMessageBubble extends RCKMessageBubble {
     final inputProvider = context.read<RCKMessageInputProvider>();
     inputProvider.setInputType(RCIMIWMessageInputType.initial);
 
-    Navigator.pushNamed(context, '/photo_preview', arguments: {
-      'currentIndex': currentIndex,
-      'images': images,
-    }).then((value) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => RCKPhotoPreviewPage(
+                  currentIndex: currentIndex,
+                  images: images,
+                ))).then((value) {
       chatProvider.jumpToScrollOffset();
     });
   }

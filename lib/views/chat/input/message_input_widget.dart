@@ -87,8 +87,8 @@ class _RCKMessageInputState extends State<RCKMessageInput> {
 
   Future<void> fetchRefInfo(
       BuildContext context, RCIMIWMessage? message) async {
-    if (context.read<RCKEngineProvider>().customInfoProvider != null) {
-      refName = (await context.read<RCKEngineProvider>().customInfoProvider!(
+    if (context.read<RCKEngineProvider>().userInfoProvider != null) {
+      refName = (await context.read<RCKEngineProvider>().userInfoProvider!(
               message: message))
           .name;
       setState(() {});

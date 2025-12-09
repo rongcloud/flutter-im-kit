@@ -1,9 +1,12 @@
 import 'dart:io' if (dart.library.html) 'dart:html';
 
-import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:rongcloud_im_kit/rongcloud_im_kit.dart';
+import 'package:video_player/video_player.dart';
 
 class RCKSightPlayerPage extends StatefulWidget {
   /// 当前播放的视频索引
@@ -168,6 +171,100 @@ class _RCKSightPlayerPageState extends State<RCKSightPlayerPage>
     });
   }
 
+  String? _getVideoUri() {
+    String? path = message?.local;
+    if (path?.isNotEmpty == true) {
+      if (!kIsWeb && path!.startsWith('file://')) {
+        path = path.substring(7);
+      }
+      return path;
+    }
+    if (message?.remote?.isNotEmpty == true) {
+      return message?.remote;
+    }
+    return null;
+  }
+
+  Future<void> _saveVideo() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Web 平台不支持保存视频')),
+        );
+      }
+      return;
+    }
+
+    String? uri = _getVideoUri();
+    if (uri == null || uri.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('视频地址不可用')),
+        );
+      }
+      return;
+    }
+
+    try {
+      String filePath = uri;
+      if (uri.startsWith('http')) {
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File(
+            '${tempDir.path}/video_${DateTime.now().millisecondsSinceEpoch}');
+        final response = await Dio().get<List<int>>(
+          uri,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        await tempFile.writeAsBytes(response.data ?? []);
+        filePath = tempFile.path;
+      }
+
+      final result = await ImageGallerySaverPlus.saveFile(filePath);
+      final success = result['isSuccess'] == true;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(success ? '视频已保存到相册' : '保存视频失败，请稍后重试')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      }
+    }
+  }
+
+  void _showSaveMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: const Text('保存到本地'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _saveVideo();
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('取消'),
+                onTap: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -276,6 +373,7 @@ class _RCKSightPlayerPageState extends State<RCKSightPlayerPage>
     return Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
+        onLongPress: _showSaveMenu,
         onTap: _toggleControls,
         child: Stack(
           children: [

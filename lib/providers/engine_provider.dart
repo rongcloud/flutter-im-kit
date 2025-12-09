@@ -3,11 +3,12 @@ import 'dart:io' if (dart.library.html) 'dart:html';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:rongcloud_im_kit/models/chat_profile_info.dart';
+import 'package:rongcloud_im_kit/utils/constants.dart'
+    show moduleName, moduleVersion;
 import 'package:rongcloud_im_wrapper_plugin/rongcloud_im_wrapper_plugin.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 // ignore: implementation_imports
 import 'package:rongcloud_im_wrapper_plugin/src/rongcloud_im_wrapper_platform_interface.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 class RCKEngineProvider with ChangeNotifier {
   RCIMIWEngine? engine;
@@ -17,6 +18,8 @@ class RCKEngineProvider with ChangeNotifier {
   int get totalUnreadCount => _totalUnreadCount;
 
   final List<RCIMIWMessage> _failedMessages = [];
+
+  bool _isResendingFailedMessages = false;
 
   final ValueNotifier<RCIMIWMessage?> receiveMessageNotifier =
       ValueNotifier(null);
@@ -49,7 +52,7 @@ class RCKEngineProvider with ChangeNotifier {
   bool get enableLocalNotification => _enableLocalNotification;
 
   /// 自定义信息提供者
-  CustomInfoProvider? customInfoProvider;
+  CustomInfoProvider? userInfoProvider;
 
   // AppSettings里语音转文字开关
   bool _enableSpeechToText = true;
@@ -115,9 +118,8 @@ class RCKEngineProvider with ChangeNotifier {
     RCIMWrapperPlatform.instance.writeLog('RCKEngineProvider engineConnect', '',
         0, 'connecting to server with token');
     if (Platform.isIOS) {
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
       await RCIMWrapperPlatform.instance
-          .setModuleName('flutterimkit', packageInfo.version);
+          .setModuleName(moduleName, moduleVersion);
     }
 
     await engine?.connect(token, timeout,
@@ -248,9 +250,9 @@ class RCKEngineProvider with ChangeNotifier {
       String content = '';
 
       // 获取自定义信息
-      if (customInfoProvider != null) {
+      if (userInfoProvider != null) {
         final customInfo =
-            await customInfoProvider!(message: message, conversation: null);
+            await userInfoProvider!(message: message, conversation: null);
         targetId = customInfo.name;
       }
 
@@ -349,19 +351,38 @@ class RCKEngineProvider with ChangeNotifier {
   }
 
   void addFailedMessage(RCIMIWMessage message) {
+    final int? messageId = message.messageId;
+    final String? messageUId = message.messageUId;
+    if (messageUId != null) {
+      _failedMessages.removeWhere((item) => item.messageUId == messageUId);
+    }
+    if (messageId != null) {
+      _failedMessages.removeWhere((item) => item.messageId == messageId);
+    }
+    _failedMessages.remove(message);
+
     _failedMessages.add(message);
     RCIMWrapperPlatform.instance.writeLog('RCKEngineProvider addFailedMessage',
-        '', 0, 'addFailedMessage ${message.messageId}');
+        '', 0, 'addFailedMessage ${message.messageId} ${message.messageUId}');
     notifyListeners();
   }
 
   void removeFailedMessage(RCIMIWMessage message) {
+    final int? messageId = message.messageId;
+    final String? messageUId = message.messageUId;
+    if (messageUId != null) {
+      _failedMessages.removeWhere((item) => item.messageUId == messageUId);
+    }
+    if (messageId != null) {
+      _failedMessages.removeWhere((item) => item.messageId == messageId);
+    }
     _failedMessages.remove(message);
+
     RCIMWrapperPlatform.instance.writeLog(
         'RCKEngineProvider removeFailedMessage',
         '',
         0,
-        'removeFailedMessage ${message.messageId}');
+        'removeFailedMessage ${message.messageId} ${message.messageUId}');
     notifyListeners();
   }
 
@@ -373,24 +394,42 @@ class RCKEngineProvider with ChangeNotifier {
   }
 
   void resendFailedMessages() {
-    for (var message in _failedMessages) {
-      if (message is RCIMIWMediaMessage) {
-        engine?.sendMediaMessage(message, listener:
-            RCIMIWSendMediaMessageListener(onMediaMessageSent: (code, message) {
-          if (code == 0 && message != null) {
-            removeFailedMessage(message);
-            failedMessageSentNotifier.value = message;
-          }
-        }));
-      } else {
-        engine?.sendMessage(message,
-            callback: RCIMIWSendMessageCallback(onMessageSent: (code, message) {
-          if (code == 0 && message != null) {
-            removeFailedMessage(message);
-            failedMessageSentNotifier.value = message;
-          }
-        }));
+    if (_isResendingFailedMessages) {
+      RCIMWrapperPlatform.instance.writeLog(
+          'RCKEngineProvider resendFailedMessages',
+          '',
+          0,
+          'resendFailedMessages skipped: already running');
+      return;
+    }
+
+    if (_failedMessages.isEmpty) {
+      return;
+    }
+
+    _isResendingFailedMessages = true;
+    try {
+      for (var message in _failedMessages) {
+        if (message is RCIMIWMediaMessage) {
+          engine?.sendMediaMessage(message, listener:
+              RCIMIWSendMediaMessageListener(onMediaMessageSent: (code, message) {
+            if (code == 0 && message != null) {
+              removeFailedMessage(message);
+              failedMessageSentNotifier.value = message;
+            }
+          }));
+        } else {
+          engine?.sendMessage(message,
+              callback: RCIMIWSendMessageCallback(onMessageSent: (code, message) {
+            if (code == 0 && message != null) {
+              removeFailedMessage(message);
+              failedMessageSentNotifier.value = message;
+            }
+          }));
+        }
       }
+    } finally {
+      _isResendingFailedMessages = false;
     }
     RCIMWrapperPlatform.instance.writeLog(
         'RCKEngineProvider resendFailedMessages',

@@ -12,12 +12,12 @@ class RCKForwardSelectPage extends StatefulWidget {
 }
 
 class RCKForwardSelectPageState extends State<RCKForwardSelectPage> {
-  late CustomInfoProvider? customInfoProvider;
+  late CustomInfoProvider? userInfoProvider;
 
   @override
   void initState() {
     super.initState();
-    customInfoProvider = context.read<RCKEngineProvider>().customInfoProvider;
+    userInfoProvider = context.read<RCKEngineProvider>().userInfoProvider;
   }
 
   @override
@@ -26,10 +26,10 @@ class RCKForwardSelectPageState extends State<RCKForwardSelectPage> {
         create: (_) {
           final provider = RCKForwardProvider(context.read<RCKChatProvider>());
           // 在Provider创建后立即获取聊天资料信息
-          if (customInfoProvider != null) {
+          if (userInfoProvider != null) {
             // 使用Future.microtask确保在build完成后执行
             // Future.delayed(const Duration(seconds: 2), () {
-            provider.setCustomInfoProvider(context, customInfoProvider!);
+            provider.setCustomInfoProvider(context, userInfoProvider!);
             // });
           }
           return provider;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:rongcloud_im_kit/views/chat_extras/file_preview_page.dart';
 import '../../../rongcloud_im_kit.dart';
 import '../../../utils/file_util.dart';
 
@@ -102,10 +103,13 @@ class RCKFileMessageBubble extends RCKMessageBubble {
     context.read<RCKVoiceRecordProvider>().cancelRecord();
     final chatProvider = context.read<RCKChatProvider>();
     chatProvider.saveScrollOffset();
-    Navigator.pushNamed(context, '/file_preview', arguments: {
-      'fileMessage': message as RCIMIWFileMessage,
-      'chatProvider': context.read<RCKChatProvider>(),
-    }).then((value) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+                value: chatProvider,
+                child: RCKFilePreviewPage(
+                    fileMessage: message as RCIMIWFileMessage)))).then((value) {
       chatProvider.jumpToScrollOffset();
     });
   }

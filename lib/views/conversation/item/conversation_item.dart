@@ -63,10 +63,10 @@ class _ConversationItemState extends State<ConversationItem> {
 
   // 异步获取用户信息
   Future<void> _fetchCustomInfo() async {
-    if (context.read<RCKEngineProvider>().customInfoProvider == null) return;
+    if (context.read<RCKEngineProvider>().userInfoProvider == null) return;
     customInfo = await Future.value(context
         .read<RCKEngineProvider>()
-        .customInfoProvider!(conversation: widget.conversation));
+        .userInfoProvider!(conversation: widget.conversation));
     if (mounted) {
       setState(() {});
     }

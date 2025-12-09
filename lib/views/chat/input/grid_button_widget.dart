@@ -232,7 +232,7 @@ List<RCKExtensionMenuItemConfig> getDefaultGridItems(
         }
         final status = await checkPermission.request();
 
-        if (status.isGranted) {
+        if (status.isGranted || status.isLimited) {
           // 有权限
           if (context.mounted) {
             context.read<RCKAudioPlayerProvider>().stopVoiceMessage();
@@ -321,7 +321,7 @@ List<RCKExtensionMenuItemConfig> getDefaultGridItems(
         }
         final status = await checkPermission.request();
 
-        if (status.isGranted) {
+        if (status.isGranted || status.isLimited) {
           // 有权限
           if (context.mounted) {
             context.read<RCKAudioPlayerProvider>().stopVoiceMessage();

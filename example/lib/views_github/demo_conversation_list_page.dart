@@ -81,7 +81,8 @@ class DemoConversationListPage extends StatelessWidget {
             child: RCKConvoPage(
               // 自定义点击事件
               onItemTap: (buildContext, conversation, index) {
-                // 直接跳转到聊天页面
+                final provider = buildContext.read<RCKConvoProvider>();
+                provider.selectConversation(conversation);
                 Navigator.push(
                   buildContext,
                   MaterialPageRoute(
@@ -89,7 +90,10 @@ class DemoConversationListPage extends StatelessWidget {
                       conversation: conversation,
                     ),
                   ),
-                );
+                ).then((value) {
+                  if (!buildContext.mounted) return;
+                  provider.popConversation();
+                });
               },
             ),
           ),

@@ -207,15 +207,14 @@ class _MessageBubbleState extends State<RCKMessageBubble> {
   }
 
   Future<void> _fetchCustomInfo() async {
-    final customInfoProvider =
-        context.read<RCKEngineProvider>().customInfoProvider;
-    if (customInfoProvider != null) {
-      customBubbleInfo = await customInfoProvider(message: widget.message);
+    final userInfoProvider = context.read<RCKEngineProvider>().userInfoProvider;
+    if (userInfoProvider != null) {
+      customBubbleInfo = await userInfoProvider(message: widget.message);
       if (widget.message is RCIMIWReferenceMessage) {
         final refMsg =
             (widget.message as RCIMIWReferenceMessage).referenceMessage;
         if (refMsg != null && mounted && context.mounted) {
-          refName = (await customInfoProvider(message: refMsg)).name;
+          refName = (await userInfoProvider(message: refMsg)).name;
         }
       }
       if (widget.message is RCIMIWRecallNotificationMessage) {
@@ -229,8 +228,7 @@ class _MessageBubbleState extends State<RCKMessageBubble> {
             if (widget.message.senderUserId == currentUserId) {
               refName = '你';
             } else {
-              refName =
-                  (await customInfoProvider(message: widget.message)).name;
+              refName = (await userInfoProvider(message: widget.message)).name;
             }
           }
         }
@@ -299,7 +297,8 @@ class _MessageBubbleState extends State<RCKMessageBubble> {
           size: kBubbleStatusSize,
         ),
       );
-    } else if (widget.message.sentStatus == RCIMIWSentStatus.failed) {
+    } else if (widget.message.sentStatus == RCIMIWSentStatus.failed ||
+        widget.message.sentStatus == RCIMIWSentStatus.canceled) {
       return Padding(
         padding: EdgeInsets.only(
             right: kBubbleStatusPadding, top: bubblePadding.vertical / 2),
@@ -885,9 +884,13 @@ class _MessageBubbleState extends State<RCKMessageBubble> {
         context.read<RCKVoiceRecordProvider>().cancelRecord();
         chatProvider.toggleMessageSelection(widget.message, context);
         chatProvider.saveScrollOffset();
-        Navigator.pushNamed(context, '/forward', arguments: {
-          'chatProvider': chatProvider,
-        }).then((value) {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ChangeNotifierProvider.value(
+                      value: chatProvider,
+                      child: RCKForwardSelectPage(),
+                    ))).then((value) {
           chatProvider.setMultiSelectMode(false);
           chatProvider.jumpToScrollOffset();
         });
