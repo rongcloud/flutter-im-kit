@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 const String moduleName = 'flutterimkit';
-const String moduleVersion = '1.0.1';
+const String moduleVersion = '1.0.3';
 
 const Color scaffoldBackgroundColor = Colors.white; // 对话列表背景颜色
 const Color chatPageBackgroundColor = Color(0xFFF5F6F9); // 对话背景颜色

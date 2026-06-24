@@ -188,6 +188,9 @@ class RCKConvoProvider with ChangeNotifier {
               _isFetching = false;
             }
           } else {
+            if (isFirstLoadInFetch) {
+              _conversations = [];
+            }
             _isLoadingMore = false;
             _isFetching = false;
             notifyListeners();

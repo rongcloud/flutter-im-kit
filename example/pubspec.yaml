@@ -35,7 +35,8 @@ dependencies:
   provider: ^6.1.2
   permission_handler: ^12.0.0+1
   
-# dependency_overrides:
+dependency_overrides:
+  device_info_plus: 11.5.0
 #   flutter_plugin_android_lifecycle: 2.0.23
 #   audio_session: 0.1.14
 
@@ -57,6 +58,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
